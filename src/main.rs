@@ -338,15 +338,15 @@ impl MainState {
 fn gen_aliens(level_spec:&LevelSpec) -> Vec<Alien> {    
     let mut aliens = Vec::new();
     let mut rng = rand::thread_rng();
-    let opCount = level_spec.operations.len();
+    let op_count = level_spec.operations.len();
     for i in 0 .. 20 {
         let alien = 
             Alien {
-                    operation: level_spec.operations[rng.gen_range(0,opCount)],
+                    operation: level_spec.operations[rng.gen_range(0,op_count)],
                     speed: level_spec.speed,
-                    pos: na::Point2::new(rng.gen_range(0.0,800.0),rng.gen_range(-500.0,0.0)),
-                    num1: 2,
-                    num2: 2,
+                    pos: na::Point2::new(rng.gen_range(0.0,800.0),rng.gen_range(-(i+1) as f32 *100.0,0.0)),
+                    num1: rng.gen_range(0,level_spec.max_number),
+                    num2: rng.gen_range(0,level_spec.max_number) //todo with division add some logic
             };
         aliens.push(alien);
     }
