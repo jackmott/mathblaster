@@ -1,0 +1,10 @@
+[package]
+
+name = "MathBlaster"
+version = "0.0.1"
+authors = [ "Jack" ]
+include = ["assets/*"]
+edition="2018"
+
+[dependencies]
+ggez = "0.5"
