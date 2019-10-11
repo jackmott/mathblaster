@@ -9,3 +9,5 @@ edition="2018"
 [dependencies]
 ggez = "*"
 rand = "*"
+structopt = "*"
+nalgebra = "*"
