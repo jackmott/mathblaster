@@ -403,7 +403,6 @@ impl event::EventHandler for MainState {
                     Some(i) => {
                         self.aliens[i].state = AlienState::Exploding;
                         self.target = Some((i, 500.0));
-                        self.assets.explosion_sound.play_detached();
                     }
                     None => (),
                 },
