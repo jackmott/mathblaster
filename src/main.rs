@@ -11,7 +11,8 @@ use ggez;
 use ggez::audio;
 use ggez::audio::SoundSource;
 use ggez::conf;
-use ggez::event::{self, Axis, Button, GamepadId, KeyCode, KeyMods, MouseButton};
+use ggez::input::keyboard;
+use ggez::event::{self, KeyCode, KeyMods};
 use ggez::graphics::{self, Color, DrawParam};
 use ggez::nalgebra as na;
 use ggez::timer;
@@ -96,6 +97,16 @@ struct Explosion {
     elapsed: f32,  //millis
     index: usize,
 }
+
+fn get_text_center(ctx: &mut Context, text: &graphics::Text) -> na::Point2<f32> {
+    let window_dim = graphics::size(ctx);
+    let text_dim = text.dimensions(ctx);
+    na::Point2::new(
+        window_dim.0 / 2.0 - text_dim.0 as f32 / 2.0,
+        window_dim.1 / 2.0 - text_dim.1 as f32 / 2.0,
+    )
+}
+
 impl Explosion {
     fn new() -> Explosion {
         Explosion {
@@ -116,7 +127,7 @@ impl Explosion {
         )
     }
 
-    fn update(&mut self, ctx: &mut Context, dt: std::time::Duration) {
+    fn update(&mut self, _ctx: &mut Context, dt: std::time::Duration) {
         if self.elapsed <= self.duration {
             self.elapsed += dt.as_millis() as f32;
             let mut index = (self.elapsed / self.duration * 30.0) as i32;
@@ -156,7 +167,10 @@ impl Scalable for Turret {
     }
 }
 impl Turret {
-    fn update(&mut self, ctx: &mut Context, dt: std::time::Duration) {}
+    fn update(&mut self, _ctx: &mut Context, _dt: std::time::Duration) 
+    {
+
+    }
 
     fn draw(&mut self, ctx: &mut Context, assets: &mut Assets) {
         let param = DrawParam::new()
@@ -236,7 +250,7 @@ impl Alien {
         if self.state != AlienState::Dead {
             let sec = dt.as_millis() as f32 / 100000.0;
             if self.pos[1] < 0.07 {
-                self.pos = self.pos + na::Vector2::new(0.0, self.speed *3. * sec);
+                self.pos = self.pos + na::Vector2::new(0.0, self.speed * 3. * sec);
             } else {
                 self.pos = self.pos + na::Vector2::new(0.0, self.speed * sec);
             }
@@ -288,6 +302,7 @@ impl Alien {
 }
 #[derive(Debug)]
 enum GameState {
+    StartMenu,
     Playing,
     Dead,
     Won,
@@ -305,13 +320,14 @@ struct MainState {
     state: GameState,
     dead_text: graphics::Text,
     won_text: graphics::Text,
+    start_menu_text:graphics::Text,
 }
 
 impl MainState {
     fn new(ctx: &mut Context) -> GameResult<MainState> {
         let levels = vec![
             LevelSpec {
-                speed: 1.5,
+                speed: 8.0,
                 max_number: 5,
                 operations: vec![Operation::Add],
                 num_ships: 5,
@@ -343,17 +359,17 @@ impl MainState {
             LevelSpec {
                 speed: 1.5,
                 max_number: 10,
-                operations: vec![Operation::Add],
+                operations: vec![Operation::Add, Operation::Multiply, Operation::Divide],
                 num_ships: 5,
             },
         ];
 
         let assets = Assets::new(ctx);
         Ok(MainState {
-            dt: std::time::Duration::new(0, 0),
             aliens: gen_aliens(&levels[0], &assets.num_font),
             dead_text: graphics::Text::new(("You Have Died", assets.dead_font, 42.0)),
             won_text: graphics::Text::new(("You Have Won!!", assets.dead_font, 42.0)),
+            start_menu_text: graphics::Text::new(("Press Enter To Begin",assets.dead_font,42.0)),
             turret: Turret {
                 rotation: 0.0,
                 raw_text: "".to_string(),
@@ -364,13 +380,14 @@ impl MainState {
             current_level: 0,
             target: None,
             background: Background {},
-            state: GameState::Playing,
+            state: GameState::StartMenu,
+            dt: std::time::Duration::new(0, 0),
         })
     }
 }
 
 fn gen_aliens(level_spec: &LevelSpec, font: &graphics::Font) -> Vec<Alien> {
-    let mut aliens : Vec<Alien> = Vec::new();
+    let mut aliens: Vec<Alien> = Vec::new();
     let mut rng = rand::thread_rng();
     let op_count = level_spec.operations.len();
     for i in 0..level_spec.num_ships {
@@ -386,9 +403,14 @@ fn gen_aliens(level_spec: &LevelSpec, font: &graphics::Font) -> Vec<Alien> {
             Operation::Divide => (num1 / num2, "/"),
         };
         let text = num1.to_string() + op + &num2.to_string();
-        let mut x :f32 = rng.gen_range(0.05,0.95);
-        while aliens.iter().rev().take(5).any(|alien| (alien.pos[0] - x).abs() < 0.1)  {
-            x = rng.gen_range(0.05,0.95);
+        let mut x: f32 = rng.gen_range(0.05, 0.95);
+        while aliens
+            .iter()
+            .rev()
+            .take(5)
+            .any(|alien| (alien.pos[0] - x).abs() < 0.1)
+        {
+            x = rng.gen_range(0.05, 0.95);
         }
         let alien = Alien {
             operation: operation,
@@ -404,9 +426,16 @@ fn gen_aliens(level_spec: &LevelSpec, font: &graphics::Font) -> Vec<Alien> {
     aliens
 }
 impl MainState {
-    fn update_won(&mut self, ctx: &mut Context) -> GameResult {
+    fn update_start_menu(&mut self, ctx:&mut Context) -> GameResult {
+        if keyboard::is_key_pressed(ctx,KeyCode::Return) {
+            self.state = GameState::Playing;
+        }
         Ok(())
-    }fn update_dead(&mut self, ctx: &mut Context) -> GameResult {
+    }
+    fn update_won(&mut self, _ctx: &mut Context) -> GameResult {
+        Ok(())
+    }
+    fn update_dead(&mut self, _ctx: &mut Context) -> GameResult {
         Ok(())
     }
     fn update_playing(&mut self, ctx: &mut Context) -> GameResult {
@@ -421,6 +450,20 @@ impl MainState {
                     println!("removing laser");
                     None
                 } else {
+                    let turret_pos = self.turret.get_pos();
+                    let turret_vector : na::Vector2<f32> = na::Vector2::new(turret_pos[0],turret_pos[1]);
+                    let alien_pos = self.aliens[target.0].get_pos();
+                    let alien_vector = na::Vector2::new(alien_pos[0],alien_pos[1]);
+                    let v1 = na::Vector2::new(0.0,-1.0);
+                    let v2 = alien_vector - turret_vector;
+                    let mut angle = v2.angle(&v1);
+                    if alien_pos[0] < 0.5 {
+                        angle = -angle;
+                    }
+                    println!("angle:{}",angle);
+                    self.turret.rotation = angle;
+//                    let alient_vector = na::Vector2::new(alien.get_pos
+//                    self.turret.rotation = 
                     Some((target.0, target.1 - self.dt.as_millis() as f32))
                 };
             }
@@ -437,7 +480,7 @@ impl MainState {
                     self.state = GameState::Dead
                 };
             }
-            None => (), 
+            None => (),
         }
         if self
             .aliens
@@ -455,33 +498,53 @@ impl MainState {
         }
         Ok(())
     }
+    fn draw_start_menu(&mut self, ctx: &mut Context) -> GameResult {
+        let background_param = graphics::DrawParam::new().scale(
+            self.background
+                .get_texture_scale(graphics::size(ctx), &self.assets),
+        );
+        let _ = graphics::draw(ctx, &self.assets.background, background_param);
+        let text_pos = get_text_center(ctx,&self.start_menu_text);
+        let _ = graphics::draw(
+            ctx,
+            &self.start_menu_text,
+            graphics::DrawParam::new()
+                .color(graphics::Color::from((255, 0, 0, 255)))
+                .dest(text_pos),
+        );
+        graphics::present(ctx)?;
+Ok(())
+    }
     fn draw_won(&mut self, ctx: &mut Context) -> GameResult {
         let background_param = graphics::DrawParam::new().scale(
             self.background
                 .get_texture_scale(graphics::size(ctx), &self.assets),
         );
         let _ = graphics::draw(ctx, &self.assets.background, background_param);
+        let text_pos = get_text_center(ctx,&self.won_text);
         let _ = graphics::draw(
             ctx,
             &self.won_text,
             graphics::DrawParam::new()
                 .color(graphics::Color::from((255, 0, 0, 255)))
-                .dest(na::Point2::new(0.0, 0.0)),
+                .dest(text_pos),
         );
         graphics::present(ctx)?;
         Ok(())
-    }fn draw_dead(&mut self, ctx: &mut Context) -> GameResult {
+    }
+    fn draw_dead(&mut self, ctx: &mut Context) -> GameResult {
         let background_param = graphics::DrawParam::new().scale(
             self.background
                 .get_texture_scale(graphics::size(ctx), &self.assets),
         );
         let _ = graphics::draw(ctx, &self.assets.background, background_param);
+        let text_pos = get_text_center(ctx,&self.dead_text);
         let _ = graphics::draw(
             ctx,
             &self.dead_text,
             graphics::DrawParam::new()
                 .color(graphics::Color::from((255, 0, 0, 255)))
-                .dest(na::Point2::new(0.0, 0.0)),
+                .dest(text_pos),
         );
         graphics::present(ctx)?;
         Ok(())
@@ -521,6 +584,7 @@ impl MainState {
 impl event::EventHandler for MainState {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
         match &self.state {
+            GameState::StartMenu => self.update_start_menu(ctx),
             GameState::Playing => self.update_playing(ctx),
             GameState::Dead => self.update_dead(ctx),
             GameState::Won => self.update_won(ctx),
@@ -529,6 +593,7 @@ impl event::EventHandler for MainState {
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         match &self.state {
+            GameState::StartMenu => self.draw_start_menu(ctx),
             GameState::Playing => self.draw_playing(ctx),
             GameState::Dead => self.draw_dead(ctx),
             GameState::Won => self.draw_won(ctx),
@@ -549,7 +614,7 @@ impl event::EventHandler for MainState {
                 graphics::Text::new((self.turret.raw_text.clone(), self.assets.num_font, 24.0));
         }
     }
-    fn key_up_event(&mut self, _ctx: &mut Context, keycode: KeyCode, keymod: KeyMods) {
+    fn key_up_event(&mut self, _ctx: &mut Context, keycode: KeyCode, _keymod: KeyMods) {
         println!("key up: {:?}", keycode);
         if keycode == KeyCode::Return {
             match self.turret.raw_text.parse::<i32>() {
@@ -561,11 +626,11 @@ impl event::EventHandler for MainState {
                     Some(i) => {
                         self.aliens[i].state = AlienState::Exploding;
                         self.target = Some((i, 500.0));
-                        self.assets.explosion_sound.play_detached();
+                        let _ = self.assets.explosion_sound.play_detached();
                     }
                     None => (),
                 },
-                Err(e) => (),
+                Err(_) => (),
             }
             self.turret.raw_text = "".to_string();
             self.turret.text =
@@ -598,6 +663,8 @@ pub fn main() -> GameResult {
     let (ctx, event_loop) = &mut cb.build()?;
     let state = &mut MainState::new(ctx)?;
     state.assets.music.set_repeat(true);
-    state.assets.music.play_detached();
+    let _ = state.assets.music.play_detached();
+    state.dt = std::time::Duration::new(0, 0);
+    println!("about to call run");
     event::run(ctx, event_loop, state)
 }
