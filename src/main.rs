@@ -93,9 +93,12 @@ struct LevelSpec {
 }
 
 struct Explosion {
+    start_time: f32, // millis
     duration: f32, //millis
     elapsed: f32,  //millis
     index: usize,
+    pos: na::Point2<f32>,
+    sound_played: bool
 }
 
 fn get_text_center(ctx: &mut Context, text: &graphics::Text) -> na::Point2<f32> {
@@ -108,14 +111,18 @@ fn get_text_center(ctx: &mut Context, text: &graphics::Text) -> na::Point2<f32> 
 }
 
 impl Explosion {
-    fn new() -> Explosion {
+    fn new(start_time: f32,pos:na::Point2<f32>) -> Explosion {
         Explosion {
+            start_time: start_time,
             duration: 500.0,
             elapsed: 0.0,
             index: 0,
+            pos: pos,
+            sound_played:false,
         }
     }
     fn get_rect(&self) -> graphics::Rect {
+        println!("index:{} elapsed:{} start:{} duration:{}",self.index,self.elapsed,self.start_time,self.duration);
         let index = 15 - self.index; //reverse the order
         let x = index % 4;
         let y = index / 4;
@@ -127,26 +134,34 @@ impl Explosion {
         )
     }
 
-    fn update(&mut self, _ctx: &mut Context, dt: std::time::Duration) {
-        if self.elapsed <= self.duration {
+    fn update(&mut self, _ctx: &mut Context,  dt: std::time::Duration) {
+        if self.elapsed - self.start_time <= self.duration {
             self.elapsed += dt.as_millis() as f32;
-            let mut index = (self.elapsed / self.duration * 30.0) as i32;
-            if index > 15 {
-                index = 15 + (15 - index);
+            if self.elapsed >= self.start_time {
+                            let mut index = ((self.elapsed-self.start_time) / self.duration * 30.0) as i32;
+                if index > 15 {
+                    index = 15 + (15 - index);
+                }
+                println!("index in update:{}", index);
+                self.index = index as usize;
             }
-            println!("index in update:{}", index);
-            self.index = index as usize;
         }
     }
 
-    fn draw(&mut self, ctx: &mut Context, assets: &Assets, point: na::Point2<f32>) {
-        if self.elapsed <= self.duration {
-            println!("drawing");
-            let param = DrawParam::new()
-                .color(Color::from((255, 255, 255, 255)))
-                .dest(point - na::Vector2::new(32.0, 32.0))
-                .src(self.get_rect());
-            let _ = graphics::draw(ctx, &assets.explosion, param);
+    fn draw(&mut self, ctx: &mut Context, assets: &mut Assets) {
+        if self.elapsed >= self.start_time  {
+            if !self.sound_played {
+                    let _ = assets.explosion_sound.play_detached();
+                    self.sound_played = true;
+                }         
+            if self.elapsed-self.start_time <= self.duration {
+                let screen = graphics::size(ctx);
+                let param = DrawParam::new()
+                    .color(Color::from((255, 255, 255, 255)))
+                    .dest(na::Point2::new(self.pos[0]*screen.0,self.pos[1]*screen.1) - na::Vector2::new(32.0, 32.0))
+                    .src(self.get_rect());
+                let _ = graphics::draw(ctx, &assets.explosion, param);
+            }
         }
     }
 }
@@ -154,7 +169,7 @@ struct Turret {
     rotation: f32,
     raw_text: String,
     text: graphics::Text,
-    explosions: [Explosion;5]
+    explosions: Vec<Explosion>
 }
 impl Scalable for Turret {
     fn get_pos(&self) -> na::Point2<f32> {
@@ -169,11 +184,20 @@ impl Scalable for Turret {
 }
 impl Turret {
     fn new(assets:&Assets) -> Turret {
+        let mut rng = rand::thread_rng();
+        let mut explosions = Vec::new();
+        for _ in 0 .. 20 {
+            let r1 = rng.gen_range(-0.05,0.05);
+            let r2 = rng.gen_range(-0.05,0.05);
+            let t = rng.gen_range(0.0,1000.0);
+            explosions.push(Explosion::new(t,na::Point2::new(0.5+r1,0.9+r2)));
+        }
+
         Turret {
                 rotation: 0.0,
                 raw_text: "".to_string(),
                 text: graphics::Text::new(("", assets.main_font, 24.0)),
-                explosions: [Explosion::new(),Explosion::new(),Explosion::new(),Explosion::new(),Explosion::new()]
+                explosions: explosions
        }
     }
 
@@ -270,7 +294,7 @@ impl Alien {
         }
     }
 
-    fn draw(&mut self, ctx: &mut Context, assets: &Assets) {
+    fn draw(&mut self, ctx: &mut Context, assets: &mut Assets) {
         if self.state != AlienState::Dead {
             if self.explosion.elapsed < self.explosion.duration / 2.0 {
                 let params = DrawParam::new()
@@ -302,8 +326,9 @@ impl Alien {
         }
 
         if self.state == AlienState::Exploding {
+            self.explosion.pos = self.get_pos();
             self.explosion
-                .draw(ctx, assets, self.get_screen_pos(graphics::size(ctx)))
+                .draw(ctx, assets);
         }
     }
 }
@@ -433,7 +458,7 @@ fn gen_aliens(level_spec: &LevelSpec, font: &graphics::Font) -> Vec<Alien> {
             pos: na::Point2::new(x, -(i as i32) as f32 * 0.1),
             text: graphics::Text::new((text, *font, 24.0)),
             answer: answer,
-            explosion: Explosion::new(),
+            explosion: Explosion::new(0.0,na::Point2::new(0.0,0.0)),
             state: AlienState::Alive,
         };
         aliens.push(alien);
@@ -480,6 +505,9 @@ impl MainState {
         self.turret.update(ctx, self.dt);
         for splosion in &mut self.turret.explosions {
             splosion.update(ctx,self.dt);
+        }
+        if self.turret.explosions.iter().all(|splosion| splosion.elapsed-splosion.start_time > splosion.duration) {
+            self.state = GameState::Dead;
         }
         Ok(())
     }
@@ -660,7 +688,7 @@ impl MainState {
             let mut pos = self.turret.get_screen_pos(graphics::size(ctx));
             pos[0] += ((10+i%2) as f32 / 100.0) * graphics::size(ctx).0;
 
-            self.turret.explosions[i].draw(ctx, &self.assets, pos)
+            self.turret.explosions[i].draw(ctx, &mut self.assets)
         }
 
         graphics::present(ctx)?;
