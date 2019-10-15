@@ -11,9 +11,9 @@ use ggez;
 use ggez::audio;
 use ggez::audio::SoundSource;
 use ggez::conf;
-use ggez::input::keyboard;
 use ggez::event::{self, KeyCode, KeyMods};
 use ggez::graphics::{self, Color, DrawParam};
+use ggez::input::keyboard;
 use ggez::nalgebra as na;
 use ggez::timer;
 use ggez::{Context, GameResult};
@@ -50,8 +50,8 @@ struct Assets {
     sub_ship: graphics::Image,
     mul_ship: graphics::Image,
     div_ship: graphics::Image,
-    num_font: graphics::Font,
-    dead_font: graphics::Font,
+    title_font: graphics::Font,
+    main_font: graphics::Font,
     turret: graphics::Image,
     background: graphics::Image,
     explosion: graphics::Image,
@@ -66,10 +66,10 @@ impl Assets {
             sub_ship: graphics::Image::new(ctx, "/sub-ship.png").unwrap(),
             mul_ship: graphics::Image::new(ctx, "/mul-ship.png").unwrap(),
             div_ship: graphics::Image::new(ctx, "/div-ship.png").unwrap(),
-            num_font: graphics::Font::new(ctx, "/dejamono.ttf").unwrap(),
-            dead_font: graphics::Font::new(ctx, "/oneway.ttf").unwrap(),
+            title_font: graphics::Font::new(ctx,"/title.ttf").unwrap(),
+            main_font: graphics::Font::new(ctx, "/main.ttf").unwrap(),
             turret: graphics::Image::new(ctx, "/turret.png").unwrap(),
-            background: graphics::Image::new(ctx, "/background.jpg").unwrap(),
+            background: graphics::Image::new(ctx, "/spacebg1.jpg").unwrap(),
             explosion: graphics::Image::new(ctx, "/explosion.png").unwrap(),
             explosion_sound: audio::Source::new(ctx, "/explosion.wav").unwrap(),
             music: audio::Source::new(ctx, "/music.ogg").unwrap(),
@@ -167,10 +167,7 @@ impl Scalable for Turret {
     }
 }
 impl Turret {
-    fn update(&mut self, _ctx: &mut Context, _dt: std::time::Duration) 
-    {
-
-    }
+    fn update(&mut self, _ctx: &mut Context, _dt: std::time::Duration) {}
 
     fn draw(&mut self, ctx: &mut Context, assets: &mut Assets) {
         let param = DrawParam::new()
@@ -308,6 +305,12 @@ enum GameState {
     Won,
 }
 
+struct TextState {
+    dead_text: graphics::Text,
+    won_text: graphics::Text,
+    press_enter: graphics::Text,
+    math_blaster: graphics::Text,
+}
 struct MainState {
     dt: std::time::Duration,
     aliens: Vec<Alien>,
@@ -318,9 +321,7 @@ struct MainState {
     target: Option<(usize, f32)>,
     background: Background,
     state: GameState,
-    dead_text: graphics::Text,
-    won_text: graphics::Text,
-    start_menu_text:graphics::Text,
+    text: TextState,
 }
 
 impl MainState {
@@ -366,14 +367,21 @@ impl MainState {
 
         let assets = Assets::new(ctx);
         Ok(MainState {
-            aliens: gen_aliens(&levels[0], &assets.num_font),
-            dead_text: graphics::Text::new(("You Have Died", assets.dead_font, 42.0)),
-            won_text: graphics::Text::new(("You Have Won!!", assets.dead_font, 42.0)),
-            start_menu_text: graphics::Text::new(("Press Enter To Begin",assets.dead_font,42.0)),
+            aliens: gen_aliens(&levels[0], &assets.main_font),
+            text: TextState {
+                dead_text: graphics::Text::new(("You Have Died", assets.title_font, 128.0)),
+                won_text: graphics::Text::new(("You Have Won!!", assets.main_font, 128.0)),
+                press_enter: graphics::Text::new((
+                    "Press Enter",
+                    assets.main_font,
+                    42.0,
+                )),
+                math_blaster: graphics::Text::new(("Math Blaster!",assets.title_font,128.0)),
+            },
             turret: Turret {
                 rotation: 0.0,
                 raw_text: "".to_string(),
-                text: graphics::Text::new(("", assets.num_font, 24.0)),
+                text: graphics::Text::new(("", assets.main_font, 24.0)),
             },
             assets: assets,
             levels: levels,
@@ -426,16 +434,34 @@ fn gen_aliens(level_spec: &LevelSpec, font: &graphics::Font) -> Vec<Alien> {
     aliens
 }
 impl MainState {
-    fn update_start_menu(&mut self, ctx:&mut Context) -> GameResult {
-        if keyboard::is_key_pressed(ctx,KeyCode::Return) {
-            self.state = GameState::Playing;
+    fn set_level(&mut self,i:usize) {
+            self.current_level = i;
+            self.target = None;
+            if self.current_level >= self.levels.len() {
+                self.state = GameState::Won;
+            } else {
+                let level_spec = &self.levels[self.current_level];
+                self.aliens = gen_aliens(level_spec, &self.assets.main_font);
+            }
+    }
+
+    fn update_start_menu(&mut self, ctx: &mut Context) -> GameResult {
+        if keyboard::is_key_pressed(ctx, KeyCode::Return) {
+            self.set_level(0);
+            self.state = GameState::Playing;            
         }
         Ok(())
     }
-    fn update_won(&mut self, _ctx: &mut Context) -> GameResult {
+    fn update_won(&mut self, ctx: &mut Context) -> GameResult {
+        if keyboard::is_key_pressed(ctx, KeyCode::Return) {
+            self.state = GameState::StartMenu;
+        }
         Ok(())
     }
-    fn update_dead(&mut self, _ctx: &mut Context) -> GameResult {
+    fn update_dead(&mut self, ctx: &mut Context) -> GameResult {
+        if keyboard::is_key_pressed(ctx, KeyCode::Return) {
+            self.state = GameState::StartMenu;
+        }
         Ok(())
     }
     fn update_playing(&mut self, ctx: &mut Context) -> GameResult {
@@ -451,19 +477,20 @@ impl MainState {
                     None
                 } else {
                     let turret_pos = self.turret.get_pos();
-                    let turret_vector : na::Vector2<f32> = na::Vector2::new(turret_pos[0],turret_pos[1]);
+                    let turret_vector: na::Vector2<f32> =
+                        na::Vector2::new(turret_pos[0], turret_pos[1]);
                     let alien_pos = self.aliens[target.0].get_pos();
-                    let alien_vector = na::Vector2::new(alien_pos[0],alien_pos[1]);
-                    let v1 = na::Vector2::new(0.0,-1.0);
+                    let alien_vector = na::Vector2::new(alien_pos[0], alien_pos[1]);
+                    let v1 = na::Vector2::new(0.0, -1.0);
                     let v2 = alien_vector - turret_vector;
                     let mut angle = v2.angle(&v1);
                     if alien_pos[0] < 0.5 {
                         angle = -angle;
                     }
-                    println!("angle:{}",angle);
+                    println!("angle:{}", angle);
                     self.turret.rotation = angle;
-//                    let alient_vector = na::Vector2::new(alien.get_pos
-//                    self.turret.rotation = 
+                    //                    let alient_vector = na::Vector2::new(alien.get_pos
+                    //                    self.turret.rotation =
                     Some((target.0, target.1 - self.dt.as_millis() as f32))
                 };
             }
@@ -487,14 +514,7 @@ impl MainState {
             .iter()
             .all(|alien| alien.state == AlienState::Dead)
         {
-            self.current_level += 1;
-            self.target = None;
-            if self.current_level >= self.levels.len() {
-                self.state = GameState::Won;
-            } else {
-                let level_spec = &self.levels[self.current_level];
-                self.aliens = gen_aliens(level_spec, &self.assets.num_font);
-            }
+            self.set_level(self.current_level+1);
         }
         Ok(())
     }
@@ -504,16 +524,19 @@ impl MainState {
                 .get_texture_scale(graphics::size(ctx), &self.assets),
         );
         let _ = graphics::draw(ctx, &self.assets.background, background_param);
-        let text_pos = get_text_center(ctx,&self.start_menu_text);
+        let text_pos = get_text_center(ctx, &self.text.press_enter);
+        let mut title_pos = get_text_center(ctx,&self.text.math_blaster);
+        title_pos[1] *= 0.5;
         let _ = graphics::draw(
             ctx,
-            &self.start_menu_text,
+            &self.text.press_enter,
             graphics::DrawParam::new()
-                .color(graphics::Color::from((255, 0, 0, 255)))
+                .color(graphics::Color::from((255, 255, 255, 255)))
                 .dest(text_pos),
         );
+        let _ = graphics::draw(ctx,&self.text.math_blaster,graphics::DrawParam::new().color(graphics::Color::from((0,0,255,255))).dest(title_pos),);
         graphics::present(ctx)?;
-Ok(())
+        Ok(())
     }
     fn draw_won(&mut self, ctx: &mut Context) -> GameResult {
         let background_param = graphics::DrawParam::new().scale(
@@ -521,14 +544,17 @@ Ok(())
                 .get_texture_scale(graphics::size(ctx), &self.assets),
         );
         let _ = graphics::draw(ctx, &self.assets.background, background_param);
-        let text_pos = get_text_center(ctx,&self.won_text);
+        let text_pos = get_text_center(ctx, &self.text.press_enter);
+        let mut title_pos = get_text_center(ctx,&self.text.won_text);
+        title_pos[1] *= 0.5;
         let _ = graphics::draw(
             ctx,
-            &self.won_text,
+            &self.text.press_enter,
             graphics::DrawParam::new()
-                .color(graphics::Color::from((255, 0, 0, 255)))
+                .color(graphics::Color::from((255, 255, 255, 255)))
                 .dest(text_pos),
         );
+        let _ = graphics::draw(ctx,&self.text.won_text,graphics::DrawParam::new().color(graphics::Color::from((0,0,255,255))).dest(title_pos),);
         graphics::present(ctx)?;
         Ok(())
     }
@@ -538,14 +564,17 @@ Ok(())
                 .get_texture_scale(graphics::size(ctx), &self.assets),
         );
         let _ = graphics::draw(ctx, &self.assets.background, background_param);
-        let text_pos = get_text_center(ctx,&self.dead_text);
+        let text_pos = get_text_center(ctx, &self.text.press_enter);
+        let mut title_pos = get_text_center(ctx,&self.text.dead_text);
+        title_pos[1] *= 0.5;
         let _ = graphics::draw(
             ctx,
-            &self.dead_text,
+            &self.text.press_enter,
             graphics::DrawParam::new()
-                .color(graphics::Color::from((255, 0, 0, 255)))
+                .color(graphics::Color::from((255, 255, 255, 255)))
                 .dest(text_pos),
         );
+        let _ = graphics::draw(ctx,&self.text.dead_text,graphics::DrawParam::new().color(graphics::Color::from((0,0,255,255))).dest(title_pos),);
         graphics::present(ctx)?;
         Ok(())
     }
@@ -611,7 +640,7 @@ impl event::EventHandler for MainState {
             println!("text input:{}", ch);
             self.turret.raw_text += &ch.to_string();
             self.turret.text =
-                graphics::Text::new((self.turret.raw_text.clone(), self.assets.num_font, 24.0));
+                graphics::Text::new((self.turret.raw_text.clone(), self.assets.main_font, 24.0));
         }
     }
     fn key_up_event(&mut self, _ctx: &mut Context, keycode: KeyCode, _keymod: KeyMods) {
@@ -634,11 +663,11 @@ impl event::EventHandler for MainState {
             }
             self.turret.raw_text = "".to_string();
             self.turret.text =
-                graphics::Text::new((self.turret.raw_text.clone(), self.assets.num_font, 24.0));
+                graphics::Text::new((self.turret.raw_text.clone(), self.assets.main_font, 24.0));
         } else if keycode == KeyCode::Back {
             let _ = self.turret.raw_text.pop();
             self.turret.text =
-                graphics::Text::new((self.turret.raw_text.clone(), self.assets.num_font, 24.0));
+                graphics::Text::new((self.turret.raw_text.clone(), self.assets.main_font, 24.0));
         }
     }
 }
@@ -656,7 +685,7 @@ pub fn main() -> GameResult {
         .add_resource_path(resource_dir)
         .window_mode(
             conf::WindowMode::default()
-                .fullscreen_type(conf::FullscreenType::Windowed)
+                .fullscreen_type(conf::FullscreenType::True)
                 .resizable(true),
         );
 
