@@ -1,2 +1,2 @@
-# rong
-pong in rust. SDL2
+Math game for kids
+

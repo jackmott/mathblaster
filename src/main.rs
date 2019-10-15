@@ -11,8 +11,8 @@ use ggez;
 use ggez::audio;
 use ggez::audio::SoundSource;
 use ggez::conf;
-use ggez::event::{self, KeyCode, KeyMods};
 use ggez::graphics::{self, Color, DrawParam};
+use ggez::event::{self,KeyCode,KeyMods};
 use ggez::input::keyboard;
 use ggez::nalgebra as na;
 use ggez::timer;
@@ -154,6 +154,7 @@ struct Turret {
     rotation: f32,
     raw_text: String,
     text: graphics::Text,
+    explosions: [Explosion;5]
 }
 impl Scalable for Turret {
     fn get_pos(&self) -> na::Point2<f32> {
@@ -167,6 +168,15 @@ impl Scalable for Turret {
     }
 }
 impl Turret {
+    fn new(assets:&Assets) -> Turret {
+        Turret {
+                rotation: 0.0,
+                raw_text: "".to_string(),
+                text: graphics::Text::new(("", assets.main_font, 24.0)),
+                explosions: [Explosion::new(),Explosion::new(),Explosion::new(),Explosion::new(),Explosion::new()]
+       }
+    }
+
     fn update(&mut self, _ctx: &mut Context, _dt: std::time::Duration) {}
 
     fn draw(&mut self, ctx: &mut Context, assets: &mut Assets) {
@@ -301,6 +311,7 @@ impl Alien {
 enum GameState {
     StartMenu,
     Playing,
+    Dying,
     Dead,
     Won,
 }
@@ -328,7 +339,7 @@ impl MainState {
     fn new(ctx: &mut Context) -> GameResult<MainState> {
         let levels = vec![
             LevelSpec {
-                speed: 8.0,
+                speed: 12.0,
                 max_number: 5,
                 operations: vec![Operation::Add],
                 num_ships: 5,
@@ -378,11 +389,7 @@ impl MainState {
                 )),
                 math_blaster: graphics::Text::new(("Math Blaster!",assets.title_font,128.0)),
             },
-            turret: Turret {
-                rotation: 0.0,
-                raw_text: "".to_string(),
-                text: graphics::Text::new(("", assets.main_font, 24.0)),
-            },
+            turret: Turret::new(&assets),
             assets: assets,
             levels: levels,
             current_level: 0,
@@ -448,6 +455,7 @@ impl MainState {
     fn update_start_menu(&mut self, ctx: &mut Context) -> GameResult {
         if keyboard::is_key_pressed(ctx, KeyCode::Return) {
             self.set_level(0);
+            self.turret = Turret::new(&self.assets);
             self.state = GameState::Playing;            
         }
         Ok(())
@@ -457,10 +465,21 @@ impl MainState {
             self.state = GameState::StartMenu;
         }
         Ok(())
-    }
+    }    
     fn update_dead(&mut self, ctx: &mut Context) -> GameResult {
         if keyboard::is_key_pressed(ctx, KeyCode::Return) {
             self.state = GameState::StartMenu;
+        }
+        Ok(())
+    }
+    fn update_dying(&mut self, ctx: &mut Context) -> GameResult {
+        self.dt = timer::delta(ctx);
+        for alien in &mut self.aliens {
+            alien.update(ctx, self.dt);
+        }
+        self.turret.update(ctx, self.dt);
+        for splosion in &mut self.turret.explosions {
+            splosion.update(ctx,self.dt);
         }
         Ok(())
     }
@@ -504,7 +523,7 @@ impl MainState {
             Some(alien) => {
                 if alien.pos[1] > 0.9 {
                     println!("seting state to dead");
-                    self.state = GameState::Dead
+                    self.state = GameState::Dying
                 };
             }
             None => (),
@@ -609,12 +628,51 @@ impl MainState {
         graphics::present(ctx)?;
         Ok(())
     }
+    fn draw_dying(&mut self, ctx: &mut Context) -> GameResult {
+        let background_param = graphics::DrawParam::new().scale(
+            self.background
+                .get_texture_scale(graphics::size(ctx), &self.assets),
+        );
+        let _ = graphics::draw(ctx, &self.assets.background, background_param);
+        match self.target {
+            Some(target) => {
+                println!("making a laser");
+                let laser = graphics::Mesh::new_line(
+                    ctx,
+                    &[
+                        self.turret.get_screen_pos(graphics::size(ctx)),
+                        self.aliens[target.0].get_screen_pos(graphics::size(ctx)),
+                    ],
+                    4.0,
+                    graphics::Color::from((255, 0, 0, 255)),
+                )
+                .unwrap();
+                let r = graphics::draw(ctx, &laser, graphics::DrawParam::default());
+                println!("err? : {:?}", r);
+            }
+            None => (),
+        };
+        for alien in &mut self.aliens {
+            alien.draw(ctx, &mut self.assets);
+        }
+        self.turret.draw(ctx, &mut self.assets);
+        for i in 0 .. self.turret.explosions.len() {
+            let mut pos = self.turret.get_screen_pos(graphics::size(ctx));
+            pos[0] += ((10+i%2) as f32 / 100.0) * graphics::size(ctx).0;
+
+            self.turret.explosions[i].draw(ctx, &self.assets, pos)
+        }
+
+        graphics::present(ctx)?;
+        Ok(())
+    }
 }
 impl event::EventHandler for MainState {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
         match &self.state {
             GameState::StartMenu => self.update_start_menu(ctx),
             GameState::Playing => self.update_playing(ctx),
+            GameState::Dying => self.update_dying(ctx),
             GameState::Dead => self.update_dead(ctx),
             GameState::Won => self.update_won(ctx),
         }
@@ -624,6 +682,7 @@ impl event::EventHandler for MainState {
         match &self.state {
             GameState::StartMenu => self.draw_start_menu(ctx),
             GameState::Playing => self.draw_playing(ctx),
+            GameState::Dying => self.draw_dying(ctx),
             GameState::Dead => self.draw_dead(ctx),
             GameState::Won => self.draw_won(ctx),
         }
