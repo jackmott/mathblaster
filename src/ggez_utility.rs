@@ -1,6 +1,6 @@
 use ggez::graphics::{self};
 use ggez::nalgebra as na;
-use ggez::{Context};
+use ggez::Context;
 
 use crate::assets::*;
 
@@ -27,8 +27,6 @@ pub trait Scalable {
         na::Point2::new(p[0] * screen_dimensions.0, p[1] * screen_dimensions.1)
     }
 }
-
-
 
 pub fn get_text_center(ctx: &mut Context, text: &graphics::Text) -> na::Point2<f32> {
     let window_dim = graphics::size(ctx);

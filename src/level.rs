@@ -1,4 +1,3 @@
-
 #[derive(Debug, Copy, Clone)]
 pub enum Operation {
     Add,
@@ -7,9 +6,107 @@ pub enum Operation {
     Divide,
 }
 
-pub struct LevelSpec {
+pub struct Level {
+    pub waves: Vec<Wave>,
+    pub background_file: String,
+}
+pub struct Wave {
+    pub groups: Vec<WaveGroup>,
+}
+pub struct WaveGroup {
     pub speed: f32,
     pub max_number: i32,
-    pub operations: Vec<Operation>,
+    pub operation: Operation,
     pub num_ships: usize,
+}
+
+impl Level {
+    pub fn new() -> Vec<Level> {
+        vec![
+            //Level 1
+            Level {
+                background_file: "spacebg1.jpg".to_string(),
+                waves: vec![
+                    Wave {
+                        groups: vec![WaveGroup {
+                            speed: 1.5,
+                            max_number: 5,
+                            operation: Operation::Add,
+                            num_ships: 10,
+                        }],
+                    },
+                    Wave {
+                        groups: vec![WaveGroup {
+                            speed: 2.5,
+                            max_number: 5,
+                            operation: Operation::Add,
+                            num_ships: 10,
+                        }],
+                    },
+                    Wave {
+                        groups: vec![WaveGroup {
+                            speed: 1.5,
+                            max_number: 10,
+                            operation: Operation::Add,
+                            num_ships: 10,
+                        }],
+                    },
+                ],
+            },
+            //Level 2
+            Level {
+                background_file: "spacebg2.jpg".to_string(),
+                waves: vec![
+                    Wave {
+                        groups: vec![
+                            WaveGroup {
+                                speed: 1.5,
+                                max_number: 5,
+                                operation: Operation::Subtract,
+                                num_ships: 10,
+                            },
+                            WaveGroup {
+                                speed: 2.5,
+                                max_number: 5,
+                                operation: Operation::Add,
+                                num_ships: 3,
+                            },
+                        ],
+                    },
+                    Wave {
+                        groups: vec![
+                            WaveGroup {
+                                speed: 2.5,
+                                max_number: 5,
+                                operation: Operation::Subtract,
+                                num_ships: 10,
+                            },
+                            WaveGroup {
+                                speed: 3.5,
+                                max_number: 5,
+                                operation: Operation::Add,
+                                num_ships: 3,
+                            },
+                        ],
+                    },
+                    Wave {
+                        groups: vec![
+                            WaveGroup {
+                                speed: 1.5,
+                                max_number: 10,
+                                operation: Operation::Subtract,
+                                num_ships: 10,
+                            },
+                            WaveGroup {
+                                speed: 2.5,
+                                max_number: 10,
+                                operation: Operation::Add,
+                                num_ships: 3,
+                            },
+                        ],
+                    },
+                ],
+            },
+        ]
+    }
 }

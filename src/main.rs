@@ -10,8 +10,8 @@
 use ggez;
 use ggez::audio::SoundSource;
 use ggez::conf;
+use ggez::event::{self, KeyCode, KeyMods};
 use ggez::graphics::{self};
-use ggez::event::{self,KeyCode,KeyMods};
 use ggez::input::keyboard;
 use ggez::nalgebra as na;
 use ggez::timer;
@@ -20,24 +20,19 @@ use rand::*;
 use std::env;
 use std::path;
 
-mod level;
 mod alien;
-mod explosion;
 mod assets;
+mod explosion;
 mod ggez_utility;
+mod level;
 mod turret;
 
-use crate::ggez_utility::*;
-use crate::assets::*;
 use crate::alien::*;
-use crate::level::*;
+use crate::assets::*;
 use crate::explosion::*;
+use crate::ggez_utility::*;
+use crate::level::*;
 use crate::turret::*;
-
-
-
-
-
 
 struct Background {}
 impl Scalable for Background {
@@ -84,8 +79,9 @@ struct MainState {
     dt: std::time::Duration,
     aliens: Vec<Alien>,
     assets: Assets,
-    levels: Vec<LevelSpec>,
+    levels: Vec<Level>,
     current_level: usize,
+    current_wave: usize,
     turret: Turret,
     target: Option<(usize, f32)>,
     background: Background,
@@ -95,62 +91,21 @@ struct MainState {
 
 impl MainState {
     fn new(ctx: &mut Context) -> GameResult<MainState> {
-        let levels = vec![
-            LevelSpec {
-                speed: 12.0,
-                max_number: 5,
-                operations: vec![Operation::Add],
-                num_ships: 5,
-            },
-            LevelSpec {
-                speed: 2.5,
-                max_number: 5,
-                operations: vec![Operation::Add],
-                num_ships: 5,
-            },
-            LevelSpec {
-                speed: 1.5,
-                max_number: 5,
-                operations: vec![Operation::Subtract],
-                num_ships: 5,
-            },
-            LevelSpec {
-                speed: 2.5,
-                max_number: 5,
-                operations: vec![Operation::Subtract],
-                num_ships: 5,
-            },
-            LevelSpec {
-                speed: 1.5,
-                max_number: 5,
-                operations: vec![Operation::Add, Operation::Subtract],
-                num_ships: 10,
-            },
-            LevelSpec {
-                speed: 1.5,
-                max_number: 10,
-                operations: vec![Operation::Add, Operation::Multiply, Operation::Divide],
-                num_ships: 5,
-            },
-        ];
-
+        let levels = Level::new();
         let assets = Assets::new(ctx);
         Ok(MainState {
-            aliens: gen_aliens(&levels[0], &assets.main_font),
+            aliens: gen_aliens(&levels[0].waves[0], &assets.main_font),
             text: TextState {
                 dead_text: graphics::Text::new(("You Have Died", assets.title_font, 128.0)),
-                won_text: graphics::Text::new(("You Have Won!!", assets.main_font, 128.0)),
-                press_enter: graphics::Text::new((
-                    "Press Enter",
-                    assets.main_font,
-                    42.0,
-                )),
-                math_blaster: graphics::Text::new(("Math Blaster!",assets.title_font,128.0)),
+                won_text: graphics::Text::new(("You Have Won", assets.main_font, 128.0)),
+                press_enter: graphics::Text::new(("Press Enter", assets.main_font, 42.0)),
+                math_blaster: graphics::Text::new(("Math Blaster", assets.title_font, 128.0)),
             },
             turret: Turret::new(&assets),
             assets: assets,
             levels: levels,
             current_level: 0,
+            current_wave: 0,
             target: None,
             background: Background {},
             state: GameState::StartMenu,
@@ -159,62 +114,69 @@ impl MainState {
     }
 }
 
-fn gen_aliens(level_spec: &LevelSpec, font: &graphics::Font) -> Vec<Alien> {
+fn gen_aliens(wave: &Wave, font: &graphics::Font) -> Vec<Alien> {
     let mut aliens: Vec<Alien> = Vec::new();
     let mut rng = rand::thread_rng();
-    let op_count = level_spec.operations.len();
-    for i in 0..level_spec.num_ships {
-        let operation = level_spec.operations[rng.gen_range(0, op_count)];
+    for group in &wave.groups {
+        for i in 0..group.num_ships {
+            let num1 = rng.gen_range(0, group.max_number);
+            let num2 = rng.gen_range(0, group.max_number); //todo with division add some logic
 
-        let num1 = rng.gen_range(0, level_spec.max_number);
-        let num2 = rng.gen_range(0, level_spec.max_number); //todo with division add some logic
-
-        let (answer, op) = match operation {
-            Operation::Add => (num1 + num2, "+"),
-            Operation::Subtract => (num1 - num2, "-"),
-            Operation::Multiply => (num1 * num2, "x"),
-            Operation::Divide => (num1 / num2, "/"),
-        };
-        let text = num1.to_string() + op + &num2.to_string();
-        let mut x: f32 = rng.gen_range(0.05, 0.95);
-        while aliens
-            .iter()
-            .rev()
-            .take(5)
-            .any(|alien| (alien.pos[0] - x).abs() < 0.1)
-        {
-            x = rng.gen_range(0.05, 0.95);
+            let (answer, op) = match group.operation {
+                Operation::Add => (num1 + num2, "+"),
+                Operation::Subtract => (num1 - num2, "-"),
+                Operation::Multiply => (num1 * num2, "x"),
+                Operation::Divide => (num1 / num2, "/"),
+            };
+            let text = num1.to_string() + op + &num2.to_string();
+            let mut x: f32 = rng.gen_range(0.05, 0.95);
+            while aliens
+                .iter()
+                .rev()
+                .take(5)
+                .any(|alien| (alien.pos[0] - x).abs() < 0.1)
+            {
+                x = rng.gen_range(0.05, 0.95);
+            }
+            let alien = Alien {
+                operation: group.operation,
+                speed: group.speed,
+                pos: na::Point2::new(x, -(i as i32) as f32 * 0.1),
+                text: graphics::Text::new((text, *font, 24.0)),
+                answer: answer,
+                explosion: Explosion::new(0.0, na::Point2::new(0.0, 0.0)),
+                state: AlienState::Alive,
+            };
+            aliens.push(alien);
         }
-        let alien = Alien {
-            operation: operation,
-            speed: level_spec.speed,
-            pos: na::Point2::new(x, -(i as i32) as f32 * 0.1),
-            text: graphics::Text::new((text, *font, 24.0)),
-            answer: answer,
-            explosion: Explosion::new(0.0,na::Point2::new(0.0,0.0)),
-            state: AlienState::Alive,
-        };
-        aliens.push(alien);
     }
     aliens
 }
 impl MainState {
-    fn set_level(&mut self,i:usize) {
-            self.current_level = i;
-            self.target = None;
-            if self.current_level >= self.levels.len() {
+    fn set_level(&mut self, level: usize, wave: usize) {
+        self.current_level = level;
+        self.current_wave = wave;
+        self.target = None;
+        let wave = &self.levels[self.current_level].waves[self.current_wave];
+        self.aliens = gen_aliens(wave, &self.assets.main_font);
+    }
+    fn increment_level_wave(&mut self) {
+        //if we were at the last wave already then go to next level
+        if self.current_wave + 1 >= self.levels[self.current_level].waves.len() {
+            if self.current_level + 1 >= self.levels.len() {
                 self.state = GameState::Won;
             } else {
-                let level_spec = &self.levels[self.current_level];
-                self.aliens = gen_aliens(level_spec, &self.assets.main_font);
+                self.set_level(self.current_level + 1, 0)
             }
+        } else {
+            self.set_level(self.current_level, self.current_wave + 1);
+        }
     }
-
     fn update_start_menu(&mut self, ctx: &mut Context) -> GameResult {
         if keyboard::is_key_pressed(ctx, KeyCode::Return) {
-            self.set_level(0);
+            self.set_level(0, 0);
             self.turret = Turret::new(&self.assets);
-            self.state = GameState::Playing;            
+            self.state = GameState::Playing;
         }
         Ok(())
     }
@@ -223,7 +185,7 @@ impl MainState {
             self.state = GameState::StartMenu;
         }
         Ok(())
-    }    
+    }
     fn update_dead(&mut self, ctx: &mut Context) -> GameResult {
         if keyboard::is_key_pressed(ctx, KeyCode::Return) {
             self.state = GameState::StartMenu;
@@ -237,9 +199,14 @@ impl MainState {
         }
         self.turret.update(ctx, self.dt);
         for splosion in &mut self.turret.explosions {
-            splosion.update(ctx,self.dt);
+            splosion.update(ctx, self.dt);
         }
-        if self.turret.explosions.iter().all(|splosion| splosion.elapsed-splosion.start_time > splosion.duration) {
+        if self
+            .turret
+            .explosions
+            .iter()
+            .all(|splosion| splosion.elapsed - splosion.start_time > splosion.duration)
+        {
             self.state = GameState::Dead;
         }
         Ok(())
@@ -294,7 +261,7 @@ impl MainState {
             .iter()
             .all(|alien| alien.state == AlienState::Dead)
         {
-            self.set_level(self.current_level+1);
+            self.increment_level_wave();
         }
         Ok(())
     }
@@ -305,7 +272,7 @@ impl MainState {
         );
         let _ = graphics::draw(ctx, &self.assets.background, background_param);
         let text_pos = get_text_center(ctx, &self.text.press_enter);
-        let mut title_pos = get_text_center(ctx,&self.text.math_blaster);
+        let mut title_pos = get_text_center(ctx, &self.text.math_blaster);
         title_pos[1] *= 0.5;
         let _ = graphics::draw(
             ctx,
@@ -314,7 +281,13 @@ impl MainState {
                 .color(graphics::Color::from((255, 255, 255, 255)))
                 .dest(text_pos),
         );
-        let _ = graphics::draw(ctx,&self.text.math_blaster,graphics::DrawParam::new().color(graphics::Color::from((0,0,255,255))).dest(title_pos),);
+        let _ = graphics::draw(
+            ctx,
+            &self.text.math_blaster,
+            graphics::DrawParam::new()
+                .color(graphics::Color::from((0, 0, 255, 255)))
+                .dest(title_pos),
+        );
         graphics::present(ctx)?;
         Ok(())
     }
@@ -325,7 +298,7 @@ impl MainState {
         );
         let _ = graphics::draw(ctx, &self.assets.background, background_param);
         let text_pos = get_text_center(ctx, &self.text.press_enter);
-        let mut title_pos = get_text_center(ctx,&self.text.won_text);
+        let mut title_pos = get_text_center(ctx, &self.text.won_text);
         title_pos[1] *= 0.5;
         let _ = graphics::draw(
             ctx,
@@ -334,7 +307,13 @@ impl MainState {
                 .color(graphics::Color::from((255, 255, 255, 255)))
                 .dest(text_pos),
         );
-        let _ = graphics::draw(ctx,&self.text.won_text,graphics::DrawParam::new().color(graphics::Color::from((0,0,255,255))).dest(title_pos),);
+        let _ = graphics::draw(
+            ctx,
+            &self.text.won_text,
+            graphics::DrawParam::new()
+                .color(graphics::Color::from((0, 0, 255, 255)))
+                .dest(title_pos),
+        );
         graphics::present(ctx)?;
         Ok(())
     }
@@ -345,7 +324,7 @@ impl MainState {
         );
         let _ = graphics::draw(ctx, &self.assets.background, background_param);
         let text_pos = get_text_center(ctx, &self.text.press_enter);
-        let mut title_pos = get_text_center(ctx,&self.text.dead_text);
+        let mut title_pos = get_text_center(ctx, &self.text.dead_text);
         title_pos[1] *= 0.5;
         let _ = graphics::draw(
             ctx,
@@ -354,7 +333,13 @@ impl MainState {
                 .color(graphics::Color::from((255, 255, 255, 255)))
                 .dest(text_pos),
         );
-        let _ = graphics::draw(ctx,&self.text.dead_text,graphics::DrawParam::new().color(graphics::Color::from((0,0,255,255))).dest(title_pos),);
+        let _ = graphics::draw(
+            ctx,
+            &self.text.dead_text,
+            graphics::DrawParam::new()
+                .color(graphics::Color::from((0, 0, 255, 255)))
+                .dest(title_pos),
+        );
         graphics::present(ctx)?;
         Ok(())
     }
@@ -417,9 +402,9 @@ impl MainState {
             alien.draw(ctx, &mut self.assets);
         }
         self.turret.draw(ctx, &mut self.assets);
-        for i in 0 .. self.turret.explosions.len() {
+        for i in 0..self.turret.explosions.len() {
             let mut pos = self.turret.get_screen_pos(graphics::size(ctx));
-            pos[0] += ((10+i%2) as f32 / 100.0) * graphics::size(ctx).0;
+            pos[0] += ((10 + i % 2) as f32 / 100.0) * graphics::size(ctx).0;
 
             self.turret.explosions[i].draw(ctx, &mut self.assets)
         }

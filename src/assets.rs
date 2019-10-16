@@ -1,6 +1,6 @@
-use ggez::graphics::{self};
 use ggez::audio;
-use ggez::{Context};
+use ggez::graphics::{self};
+use ggez::Context;
 
 pub struct Assets {
     pub add_ship: graphics::Image,
@@ -23,7 +23,7 @@ impl Assets {
             sub_ship: graphics::Image::new(ctx, "/sub-ship.png").unwrap(),
             mul_ship: graphics::Image::new(ctx, "/mul-ship.png").unwrap(),
             div_ship: graphics::Image::new(ctx, "/div-ship.png").unwrap(),
-            title_font: graphics::Font::new(ctx,"/title.ttf").unwrap(),
+            title_font: graphics::Font::new(ctx, "/title.ttf").unwrap(),
             main_font: graphics::Font::new(ctx, "/main.ttf").unwrap(),
             turret: graphics::Image::new(ctx, "/turret.png").unwrap(),
             background: graphics::Image::new(ctx, "/spacebg1.jpg").unwrap(),
@@ -33,5 +33,3 @@ impl Assets {
         }
     }
 }
-
-

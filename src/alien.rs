@@ -1,12 +1,11 @@
-
 use ggez::graphics::{self, Color, DrawParam};
 use ggez::nalgebra as na;
 
-use crate::level::*;
+use crate::assets::*;
 use crate::explosion::*;
 use crate::ggez_utility::*;
-use crate::assets::*;
-use ggez::{Context };
+use crate::level::*;
+use ggez::Context;
 
 #[derive(PartialEq)]
 pub enum AlienState {
