@@ -8,10 +8,9 @@
 //
 
 use ggez;
-use ggez::audio;
 use ggez::audio::SoundSource;
 use ggez::conf;
-use ggez::graphics::{self, Color, DrawParam};
+use ggez::graphics::{self};
 use ggez::event::{self,KeyCode,KeyMods};
 use ggez::input::keyboard;
 use ggez::nalgebra as na;
@@ -21,202 +20,24 @@ use rand::*;
 use std::env;
 use std::path;
 
-trait Scalable {
-    fn get_dimensions(&self) -> (f32, f32);
-    fn get_texture_dimensions(&self, assets: &Assets) -> (f32, f32);
-    fn get_pos(&self) -> na::Point2<f32>;
-    fn get_screen_dimensions(&self, screen_dimensions: (f32, f32)) -> (f32, f32) {
-        let (w, h) = self.get_dimensions();
-        (w * screen_dimensions.0, h * screen_dimensions.1)
-    }
-    fn get_texture_scale(
-        &self,
-        screen_dimensions: (f32, f32),
-        assets: &Assets,
-    ) -> na::Vector2<f32> {
-        let (sw, _) = self.get_screen_dimensions(screen_dimensions);
-        let (tw, th) = self.get_texture_dimensions(assets);
-        // only use screen width for scaling
-        na::Vector2::new(sw / tw, sw / th)
-    }
-    fn get_screen_pos(&self, screen_dimensions: (f32, f32)) -> na::Point2<f32> {
-        let p = self.get_pos();
-        na::Point2::new(p[0] * screen_dimensions.0, p[1] * screen_dimensions.1)
-    }
-}
+mod level;
+mod alien;
+mod explosion;
+mod assets;
+mod ggez_utility;
+mod turret;
 
-struct Assets {
-    add_ship: graphics::Image,
-    sub_ship: graphics::Image,
-    mul_ship: graphics::Image,
-    div_ship: graphics::Image,
-    title_font: graphics::Font,
-    main_font: graphics::Font,
-    turret: graphics::Image,
-    background: graphics::Image,
-    explosion: graphics::Image,
-    explosion_sound: audio::Source,
-    music: audio::Source,
-}
+use crate::ggez_utility::*;
+use crate::assets::*;
+use crate::alien::*;
+use crate::level::*;
+use crate::explosion::*;
+use crate::turret::*;
 
-impl Assets {
-    fn new(ctx: &mut Context) -> Assets {
-        Assets {
-            add_ship: graphics::Image::new(ctx, "/add-ship.png").unwrap(),
-            sub_ship: graphics::Image::new(ctx, "/sub-ship.png").unwrap(),
-            mul_ship: graphics::Image::new(ctx, "/mul-ship.png").unwrap(),
-            div_ship: graphics::Image::new(ctx, "/div-ship.png").unwrap(),
-            title_font: graphics::Font::new(ctx,"/title.ttf").unwrap(),
-            main_font: graphics::Font::new(ctx, "/main.ttf").unwrap(),
-            turret: graphics::Image::new(ctx, "/turret.png").unwrap(),
-            background: graphics::Image::new(ctx, "/spacebg1.jpg").unwrap(),
-            explosion: graphics::Image::new(ctx, "/explosion.png").unwrap(),
-            explosion_sound: audio::Source::new(ctx, "/explosion.wav").unwrap(),
-            music: audio::Source::new(ctx, "/music.ogg").unwrap(),
-        }
-    }
-}
 
-#[derive(Debug, Copy, Clone)]
-enum Operation {
-    Add,
-    Subtract,
-    Multiply,
-    Divide,
-}
 
-struct LevelSpec {
-    speed: f32,
-    max_number: i32,
-    operations: Vec<Operation>,
-    num_ships: usize,
-}
 
-struct Explosion {
-    start_time: f32, // millis
-    duration: f32, //millis
-    elapsed: f32,  //millis
-    index: usize,
-    pos: na::Point2<f32>,
-    sound_played: bool
-}
 
-fn get_text_center(ctx: &mut Context, text: &graphics::Text) -> na::Point2<f32> {
-    let window_dim = graphics::size(ctx);
-    let text_dim = text.dimensions(ctx);
-    na::Point2::new(
-        window_dim.0 / 2.0 - text_dim.0 as f32 / 2.0,
-        window_dim.1 / 2.0 - text_dim.1 as f32 / 2.0,
-    )
-}
-
-impl Explosion {
-    fn new(start_time: f32,pos:na::Point2<f32>) -> Explosion {
-        Explosion {
-            start_time: start_time,
-            duration: 500.0,
-            elapsed: 0.0,
-            index: 0,
-            pos: pos,
-            sound_played:false,
-        }
-    }
-    fn get_rect(&self) -> graphics::Rect {
-        println!("index:{} elapsed:{} start:{} duration:{}",self.index,self.elapsed,self.start_time,self.duration);
-        let index = 15 - self.index; //reverse the order
-        let x = index % 4;
-        let y = index / 4;
-        graphics::Rect::new(
-            x as f32 * 64.0 / 255.0,
-            y as f32 * 64.0 / 255.0,
-            64.0 / 255.0,
-            64.0 / 255.0,
-        )
-    }
-
-    fn update(&mut self, _ctx: &mut Context,  dt: std::time::Duration) {
-        if self.elapsed - self.start_time <= self.duration {
-            self.elapsed += dt.as_millis() as f32;
-            if self.elapsed >= self.start_time {
-                            let mut index = ((self.elapsed-self.start_time) / self.duration * 30.0) as i32;
-                if index > 15 {
-                    index = 15 + (15 - index);
-                }
-                println!("index in update:{}", index);
-                self.index = index as usize;
-            }
-        }
-    }
-
-    fn draw(&mut self, ctx: &mut Context, assets: &mut Assets) {
-        if self.elapsed >= self.start_time  {
-            if !self.sound_played {
-                    let _ = assets.explosion_sound.play_detached();
-                    self.sound_played = true;
-                }         
-            if self.elapsed-self.start_time <= self.duration {
-                let screen = graphics::size(ctx);
-                let param = DrawParam::new()
-                    .color(Color::from((255, 255, 255, 255)))
-                    .dest(na::Point2::new(self.pos[0]*screen.0,self.pos[1]*screen.1) - na::Vector2::new(32.0, 32.0))
-                    .src(self.get_rect());
-                let _ = graphics::draw(ctx, &assets.explosion, param);
-            }
-        }
-    }
-}
-struct Turret {
-    rotation: f32,
-    raw_text: String,
-    text: graphics::Text,
-    explosions: Vec<Explosion>
-}
-impl Scalable for Turret {
-    fn get_pos(&self) -> na::Point2<f32> {
-        na::Point2::new(0.5, 0.9)
-    }
-    fn get_dimensions(&self) -> (f32, f32) {
-        (0.05, 0.05)
-    }
-    fn get_texture_dimensions(&self, assets: &Assets) -> (f32, f32) {
-        (assets.turret.width() as f32, assets.turret.height() as f32)
-    }
-}
-impl Turret {
-    fn new(assets:&Assets) -> Turret {
-        let mut rng = rand::thread_rng();
-        let mut explosions = Vec::new();
-        for _ in 0 .. 20 {
-            let r1 = rng.gen_range(-0.05,0.05);
-            let r2 = rng.gen_range(-0.05,0.05);
-            let t = rng.gen_range(0.0,1000.0);
-            explosions.push(Explosion::new(t,na::Point2::new(0.5+r1,0.9+r2)));
-        }
-
-        Turret {
-                rotation: 0.0,
-                raw_text: "".to_string(),
-                text: graphics::Text::new(("", assets.main_font, 24.0)),
-                explosions: explosions
-       }
-    }
-
-    fn update(&mut self, _ctx: &mut Context, _dt: std::time::Duration) {}
-
-    fn draw(&mut self, ctx: &mut Context, assets: &mut Assets) {
-        let param = DrawParam::new()
-            .color(Color::from((255, 255, 255, 255)))
-            .scale(self.get_texture_scale(graphics::size(ctx), assets))
-            .offset(na::Point2::new(0.5, 0.5))
-            .rotation(self.rotation)
-            .dest(self.get_screen_pos(graphics::size(ctx)));
-        let _ = graphics::draw(ctx, &assets.turret, param);
-        let text_param = DrawParam::new()
-            .color(Color::from((255, 255, 255, 255)))
-            .dest(self.get_screen_pos(graphics::size(ctx)));
-        let _ = graphics::draw(ctx, &self.text, text_param);
-    }
-}
 
 struct Background {}
 impl Scalable for Background {
@@ -243,95 +64,7 @@ impl Scalable for Background {
         na::Vector2::new(sw / tw, sh / th)
     }
 }
-#[derive(PartialEq)]
-enum AlienState {
-    Alive,
-    Exploding,
-    Dead,
-}
-struct Alien {
-    operation: Operation,
-    speed: f32,
-    pos: na::Point2<f32>,
-    text: graphics::Text,
-    answer: i32,
-    explosion: Explosion,
-    state: AlienState,
-}
-impl Scalable for Alien {
-    fn get_pos(&self) -> na::Point2<f32> {
-        self.pos
-    }
-    fn get_dimensions(&self) -> (f32, f32) {
-        (0.06, 0.07)
-    }
-    fn get_texture_dimensions(&self, assets: &Assets) -> (f32, f32) {
-        let img = match self.operation {
-            Operation::Add => &assets.add_ship,
-            Operation::Subtract => &assets.sub_ship,
-            Operation::Multiply => &assets.mul_ship,
-            Operation::Divide => &assets.div_ship,
-        };
 
-        (img.width() as f32, img.height() as f32)
-    }
-}
-impl Alien {
-    fn update(&mut self, ctx: &mut Context, dt: std::time::Duration) {
-        if self.state != AlienState::Dead {
-            let sec = dt.as_millis() as f32 / 100000.0;
-            if self.pos[1] < 0.07 {
-                self.pos = self.pos + na::Vector2::new(0.0, self.speed * 3. * sec);
-            } else {
-                self.pos = self.pos + na::Vector2::new(0.0, self.speed * sec);
-            }
-            if self.state == AlienState::Exploding {
-                self.explosion.update(ctx, dt);
-            }
-            if self.explosion.elapsed > self.explosion.duration {
-                self.state = AlienState::Dead;
-            }
-        }
-    }
-
-    fn draw(&mut self, ctx: &mut Context, assets: &mut Assets) {
-        if self.state != AlienState::Dead {
-            if self.explosion.elapsed < self.explosion.duration / 2.0 {
-                let params = DrawParam::new()
-                    .color(Color::from((255, 255, 255, 255)))
-                    .dest(self.get_screen_pos(graphics::size(ctx)))
-                    .scale(self.get_texture_scale(graphics::size(ctx), assets))
-                    .offset(na::Point2::new(0.5, 0.5))
-                    .rotation(3.14159 / 2.0);
-                let img = match self.operation {
-                    Operation::Add => &assets.add_ship,
-                    Operation::Subtract => &assets.sub_ship,
-                    Operation::Multiply => &assets.mul_ship,
-                    Operation::Divide => &assets.div_ship,
-                };
-                let _ = graphics::draw(ctx, img, params);
-
-                let tw = self.text.width(ctx) as f32;
-                let (sw, sh) = self.get_screen_dimensions(graphics::size(ctx));
-                let offsetx = -sw / 2.0 + (sw - tw) / 2.0;
-                let offsety = -sh / 1.2;
-
-                let offset = na::Vector2::new(offsetx, offsety);
-
-                let text_param = DrawParam::new()
-                    .color(Color::from((255, 255, 255, 255)))
-                    .dest(self.get_screen_pos(graphics::size(ctx)) + offset);
-                let _ = graphics::draw(ctx, &self.text, text_param);
-            }
-        }
-
-        if self.state == AlienState::Exploding {
-            self.explosion.pos = self.get_pos();
-            self.explosion
-                .draw(ctx, assets);
-        }
-    }
-}
 #[derive(Debug)]
 enum GameState {
     StartMenu,
