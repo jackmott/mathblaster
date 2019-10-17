@@ -25,37 +25,37 @@ impl Level {
         vec![
             //Level 1
             Level {
-                background_file: "spacebg1.jpg".to_string(),
+                background_file: "/spacebg1.jpg".to_string(),
                 waves: vec![
                     Wave {
                         groups: vec![WaveGroup {
-                            speed: 1.5,
+                            speed: 5.5,
                             max_number: 5,
                             operation: Operation::Add,
-                            num_ships: 10,
+                            num_ships: 2,
                         }],
                     },
                     Wave {
                         groups: vec![WaveGroup {
-                            speed: 2.5,
+                            speed: 5.5,
                             max_number: 5,
                             operation: Operation::Add,
-                            num_ships: 10,
+                            num_ships: 2,
                         }],
                     },
                     Wave {
                         groups: vec![WaveGroup {
-                            speed: 1.5,
+                            speed: 5.5,
                             max_number: 10,
                             operation: Operation::Add,
-                            num_ships: 10,
+                            num_ships: 2,
                         }],
                     },
                 ],
             },
             //Level 2
             Level {
-                background_file: "spacebg2.jpg".to_string(),
+                background_file: "/spacebg2.jpg".to_string(),
                 waves: vec![
                     Wave {
                         groups: vec![

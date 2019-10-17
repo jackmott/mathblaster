@@ -1,12 +1,3 @@
-// todo
-// rotate turret to target
-// make two laser beams from actual turret points
-// game lose sate
-// add more ship images
-// multiple levels
-// make ships spawn inward a bit
-//
-
 use ggez;
 use ggez::audio::SoundSource;
 use ggez::conf;
@@ -150,6 +141,7 @@ fn gen_aliens(wave: &Wave, font: &graphics::Font) -> Vec<Alien> {
             aliens.push(alien);
         }
     }
+    aliens.sort_by(|a, b| b.pos[1].partial_cmp(&a.pos[1]).unwrap());
     aliens
 }
 impl MainState {
@@ -160,12 +152,13 @@ impl MainState {
         let wave = &self.levels[self.current_level].waves[self.current_wave];
         self.aliens = gen_aliens(wave, &self.assets.main_font);
     }
-    fn increment_level_wave(&mut self) {
+    fn increment_level_wave(&mut self, ctx: &mut Context) {
         //if we were at the last wave already then go to next level
         if self.current_wave + 1 >= self.levels[self.current_level].waves.len() {
             if self.current_level + 1 >= self.levels.len() {
                 self.state = GameState::Won;
             } else {
+                self.assets.background = graphics::Image::new(ctx, self.levels[self.current_level+1].background_file.clone()).unwrap();
                 self.set_level(self.current_level + 1, 0)
             }
         } else {
@@ -261,7 +254,7 @@ impl MainState {
             .iter()
             .all(|alien| alien.state == AlienState::Dead)
         {
-            self.increment_level_wave();
+            self.increment_level_wave(ctx);
         }
         Ok(())
     }
