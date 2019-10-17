@@ -28,6 +28,47 @@ use crate::ggez_utility::*;
 use crate::level::*;
 use crate::turret::*;
 
+
+fn gen_aliens(wave: &Wave, font: &graphics::Font) -> Vec<Alien> {
+    let mut aliens: Vec<Alien> = Vec::new();
+    let mut rng = rand::thread_rng();
+    for group in &wave.groups {
+        for i in 0..group.num_ships {
+            let num1 = rng.gen_range(0, group.max_number);
+            let num2 = rng.gen_range(0, group.max_number); //todo with division add some logic
+
+            let (answer, op) = match group.operation {
+                Operation::Add => (num1 + num2, "+"),
+                Operation::Subtract => (num1 - num2, "-"),
+                Operation::Multiply => (num1 * num2, "x"),
+                Operation::Divide => (num1 / num2, "/"),
+            };
+            let text = num1.to_string() + op + &num2.to_string();
+            let mut x: f32 = rng.gen_range(0.05, 0.95);
+            while aliens
+                .iter()
+                .rev()
+                .take(5)
+                .any(|alien| (alien.pos[0] - x).abs() < 0.1)
+            {
+                x = rng.gen_range(0.05, 0.95);
+            }
+            let alien = Alien {
+                operation: group.operation,
+                speed: group.speed,
+                pos: na::Point2::new(x, -(i as i32) as f32 * 0.1),
+                text: graphics::Text::new((text, *font, 24.0)),
+                answer: answer,
+                explosion: Explosion::new(0.0, na::Point2::new(0.0, 0.0)),
+                state: AlienState::Alive,
+            };
+            aliens.push(alien);
+        }
+    }
+    aliens.sort_by(|a, b| b.pos[1].partial_cmp(&a.pos[1]).unwrap());
+    aliens
+}
+
 struct Background {}
 impl Scalable for Background {
     fn get_pos(&self) -> na::Point2<f32> {
@@ -86,11 +127,13 @@ struct MainState {
 }
 
 impl MainState {
-    fn new(ctx: &mut Context) -> GameResult<MainState> {
+     fn new(ctx: &mut Context) -> GameResult<MainState> {
         let levels = Level::new();
         let assets = Assets::new(ctx);
+        let mut messages = VecDeque::new();
+        messages.push_back(Message::new(levels[0].title.clone(),3000.0,&assets));
         Ok(MainState {
-            messages: VecDeque::new(),
+            messages: messages,
             aliens: gen_aliens(&levels[0].waves[0], &assets.main_font),
             text: TextState {
                 dead_text: graphics::Text::new(("You Have Died", assets.title_font, 128.0)),
@@ -109,62 +152,22 @@ impl MainState {
             dt: std::time::Duration::new(0, 0),
         })
     }
-}
 
-fn gen_aliens(wave: &Wave, font: &graphics::Font) -> Vec<Alien> {
-    let mut aliens: Vec<Alien> = Vec::new();
-    let mut rng = rand::thread_rng();
-    for group in &wave.groups {
-        for i in 0..group.num_ships {
-            let num1 = rng.gen_range(0, group.max_number);
-            let num2 = rng.gen_range(0, group.max_number); //todo with division add some logic
-
-            let (answer, op) = match group.operation {
-                Operation::Add => (num1 + num2, "+"),
-                Operation::Subtract => (num1 - num2, "-"),
-                Operation::Multiply => (num1 * num2, "x"),
-                Operation::Divide => (num1 / num2, "/"),
-            };
-            let text = num1.to_string() + op + &num2.to_string();
-            let mut x: f32 = rng.gen_range(0.05, 0.95);
-            while aliens
-                .iter()
-                .rev()
-                .take(5)
-                .any(|alien| (alien.pos[0] - x).abs() < 0.1)
-            {
-                x = rng.gen_range(0.05, 0.95);
-            }
-            let alien = Alien {
-                operation: group.operation,
-                speed: group.speed,
-                pos: na::Point2::new(x, -(i as i32) as f32 * 0.1),
-                text: graphics::Text::new((text, *font, 24.0)),
-                answer: answer,
-                explosion: Explosion::new(0.0, na::Point2::new(0.0, 0.0)),
-                state: AlienState::Alive,
-            };
-            aliens.push(alien);
-        }
-    }
-    aliens.sort_by(|a, b| b.pos[1].partial_cmp(&a.pos[1]).unwrap());
-    aliens
-}
-impl MainState {
     fn set_level(&mut self, level: usize, wave: usize) {
         self.current_level = level;
         self.current_wave = wave;
         self.target = None;
         let wave = &self.levels[self.current_level].waves[self.current_wave];
-        self.aliens = gen_aliens(wave, &self.assets.main_font);
+        self.aliens = gen_aliens(wave, &self.assets.main_font);        
     }
     fn increment_level_wave(&mut self, ctx: &mut Context) {
         //if we were at the last wave already then go to next level
         if self.current_wave + 1 >= self.levels[self.current_level].waves.len() {
             if self.current_level + 1 >= self.levels.len() {
                 self.state = GameState::Won;
-            } else {
+            } else {                
                 self.assets.background = graphics::Image::new(ctx, self.levels[self.current_level+1].background_file.clone()).unwrap();
+                self.messages.push_back(Message::new(self.levels[self.current_level+1].title.clone(),3000.0,&self.assets));
                 self.set_level(self.current_level + 1, 0)
             }
         } else {
@@ -216,38 +219,49 @@ impl MainState {
         }
         Ok(())
     }
+
     fn update_playing(&mut self, ctx: &mut Context) -> GameResult {
         self.dt = timer::delta(ctx);
+
+        //update aliens and turret, and message queue
         for alien in &mut self.aliens {
             alien.update(ctx, self.dt);
         }
         self.turret.update(ctx, self.dt);
+        if !self.messages.is_empty() {
+            self.messages[0].update(self.dt);
+            if self.messages[0].elapsed >= self.messages[0].duration {
+                let _ = self.messages.pop_front();
+            }
+        }
+
+        // If there is a target, rotate the turret to it
         match self.target {
             Some(target) => {
-                self.target = if target.1 < 0.0 {
-                    println!("removing laser");
-                    None
-                } else {
-                    let turret_pos = self.turret.get_pos();
-                    let turret_vector: na::Vector2<f32> =
-                        na::Vector2::new(turret_pos[0], turret_pos[1]);
-                    let alien_pos = self.aliens[target.0].get_pos();
-                    let alien_vector = na::Vector2::new(alien_pos[0], alien_pos[1]);
-                    let v1 = na::Vector2::new(0.0, -1.0);
-                    let v2 = alien_vector - turret_vector;
-                    let mut angle = v2.angle(&v1);
-                    if alien_pos[0] < 0.5 {
-                        angle = -angle;
-                    }
-                    println!("angle:{}", angle);
-                    self.turret.rotation = angle;
-                    //                    let alient_vector = na::Vector2::new(alien.get_pos
-                    //                    self.turret.rotation =
-                    Some((target.0, target.1 - self.dt.as_millis() as f32))
-                };
+                self.target = 
+                    if target.1 < 0.0 {  // target.1 == duration, laser time is over                        
+                        None
+                    } else {
+                        let turret_pos = self.turret.get_pos();
+                        let turret_vector: na::Vector2<f32> =
+                            na::Vector2::new(turret_pos[0], turret_pos[1]);
+                        let alien_pos = self.aliens[target.0].get_pos();
+                        let alien_vector = na::Vector2::new(alien_pos[0], alien_pos[1]);
+                        let v1 = na::Vector2::new(0.0, -1.0);
+                        let v2 = alien_vector - turret_vector;
+                        let mut angle = v2.angle(&v1);
+                        if alien_pos[0] < 0.5 {
+                            angle = -angle;
+                        }                        
+                        self.turret.rotation = angle;                    
+                        //target.0 is the index into the alien array
+                        Some((target.0, target.1 - self.dt.as_millis() as f32))
+                    };
             }
             None => (),
         };
+
+        // Find the alien furthest down the screen, if its at the bottom, dead.
         match self
             .aliens
             .iter()
@@ -261,6 +275,8 @@ impl MainState {
             }
             None => (),
         }
+
+        //If all aliens are dead, increment the wave/level
         if self
             .aliens
             .iter()
@@ -268,6 +284,7 @@ impl MainState {
         {
             self.increment_level_wave(ctx);
         }
+        
         Ok(())
     }
     fn draw_start_menu(&mut self, ctx: &mut Context) -> GameResult {
@@ -377,11 +394,15 @@ impl MainState {
         Ok(())
     }
     fn draw_playing(&mut self, ctx: &mut Context) -> GameResult {
+
+        //Draw the background
         let background_param = graphics::DrawParam::new().scale(
             self.background
                 .get_texture_scale(graphics::size(ctx), &self.assets),
         );
         let _ = graphics::draw(ctx, &self.assets.background, background_param);
+
+        // if we have a target, draw the laser line
         match self.target {
             Some(target) => {
                 println!("making a laser");
@@ -395,15 +416,21 @@ impl MainState {
                     graphics::Color::from((255, 0, 0, 255)),
                 )
                 .unwrap();
-                let r = graphics::draw(ctx, &laser, graphics::DrawParam::default());
-                println!("err? : {:?}", r);
+                let _ = graphics::draw(ctx, &laser, graphics::DrawParam::default());                
             }
             None => (),
         };
+
+        //draw the aliens, turrets, and messages
         for alien in &mut self.aliens {
             alien.draw(ctx, &mut self.assets);
         }
         self.turret.draw(ctx, &mut self.assets);
+
+        if !self.messages.is_empty() {
+            self.messages[0].draw(ctx);
+        }
+
         graphics::present(ctx)?;
         Ok(())
     }
