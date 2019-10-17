@@ -9,6 +9,7 @@ pub enum Operation {
 pub struct Level {
     pub waves: Vec<Wave>,
     pub background_file: String,
+    pub title: String,
 }
 pub struct Wave {
     pub groups: Vec<WaveGroup>,
@@ -25,6 +26,7 @@ impl Level {
         vec![
             //Level 1
             Level {
+                title:"Addition Attack!".to_string(),
                 background_file: "/spacebg1.jpg".to_string(),
                 waves: vec![
                     Wave {
@@ -55,6 +57,7 @@ impl Level {
             },
             //Level 2
             Level {
+                title: "Subtraction Subterfuge".to_string(),
                 background_file: "/spacebg2.jpg".to_string(),
                 waves: vec![
                     Wave {

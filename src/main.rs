@@ -10,7 +10,9 @@ use ggez::{Context, GameResult};
 use rand::*;
 use std::env;
 use std::path;
+use std::collections::VecDeque;
 
+mod message;
 mod alien;
 mod assets;
 mod explosion;
@@ -18,6 +20,7 @@ mod ggez_utility;
 mod level;
 mod turret;
 
+use crate::message::*;
 use crate::alien::*;
 use crate::assets::*;
 use crate::explosion::*;
@@ -54,6 +57,7 @@ impl Scalable for Background {
 #[derive(Debug)]
 enum GameState {
     StartMenu,
+    LevelComplete,
     Playing,
     Dying,
     Dead,
@@ -67,6 +71,7 @@ struct TextState {
     math_blaster: graphics::Text,
 }
 struct MainState {
+    messages: VecDeque<Message>,
     dt: std::time::Duration,
     aliens: Vec<Alien>,
     assets: Assets,
@@ -85,6 +90,7 @@ impl MainState {
         let levels = Level::new();
         let assets = Assets::new(ctx);
         Ok(MainState {
+            messages: VecDeque::new(),
             aliens: gen_aliens(&levels[0].waves[0], &assets.main_font),
             text: TextState {
                 dead_text: graphics::Text::new(("You Have Died", assets.title_font, 128.0)),
@@ -176,6 +182,12 @@ impl MainState {
     fn update_won(&mut self, ctx: &mut Context) -> GameResult {
         if keyboard::is_key_pressed(ctx, KeyCode::Return) {
             self.state = GameState::StartMenu;
+        }
+        Ok(())
+    }
+    fn update_level_complete(&mut self, ctx: &mut Context) -> GameResult {
+        if keyboard::is_key_pressed(ctx, KeyCode::Return) {
+            self.state = GameState::Playing;
         }
         Ok(())
     }
@@ -310,6 +322,34 @@ impl MainState {
         graphics::present(ctx)?;
         Ok(())
     }
+
+     fn draw_level_complete(&mut self, ctx: &mut Context) -> GameResult {
+        let background_param = graphics::DrawParam::new().scale(
+            self.background
+                .get_texture_scale(graphics::size(ctx), &self.assets),
+        );
+        let _ = graphics::draw(ctx, &self.assets.background, background_param);
+        let text_pos = get_text_center(ctx, &self.text.press_enter);
+        let mut title_pos = get_text_center(ctx, &self.text.won_text);
+        title_pos[1] *= 0.5;
+        let _ = graphics::draw(
+            ctx,
+            &self.text.press_enter,
+            graphics::DrawParam::new()
+                .color(graphics::Color::from((255, 255, 255, 255)))
+                .dest(text_pos),
+        );
+        let _ = graphics::draw(
+            ctx,
+            &self.text.won_text,
+            graphics::DrawParam::new()
+                .color(graphics::Color::from((0, 0, 255, 255)))
+                .dest(title_pos),
+        );
+        graphics::present(ctx)?;
+        Ok(())
+    }
+
     fn draw_dead(&mut self, ctx: &mut Context) -> GameResult {
         let background_param = graphics::DrawParam::new().scale(
             self.background
@@ -414,6 +454,7 @@ impl event::EventHandler for MainState {
             GameState::Dying => self.update_dying(ctx),
             GameState::Dead => self.update_dead(ctx),
             GameState::Won => self.update_won(ctx),
+            GameState::LevelComplete => self.update_level_complete(ctx),
         }
     }
 
@@ -424,6 +465,7 @@ impl event::EventHandler for MainState {
             GameState::Dying => self.draw_dying(ctx),
             GameState::Dead => self.draw_dead(ctx),
             GameState::Won => self.draw_won(ctx),
+            GameState::LevelComplete => self.draw_level_complete(ctx)
         }
     }
     fn resize_event(&mut self, ctx: &mut Context, width: f32, height: f32) {
