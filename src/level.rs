@@ -31,26 +31,26 @@ impl Level {
                 waves: vec![
                     Wave {
                         groups: vec![WaveGroup {
-                            speed: 5.5,
+                            speed: 6.5,
                             max_number: 5,
                             operation: Operation::Add,
-                            num_ships: 2,
+                            num_ships: 5,
                         }],
                     },
                     Wave {
                         groups: vec![WaveGroup {
-                            speed: 5.5,
+                            speed: 6.5,
                             max_number: 5,
                             operation: Operation::Add,
-                            num_ships: 2,
+                            num_ships: 5,
                         }],
                     },
                     Wave {
                         groups: vec![WaveGroup {
-                            speed: 5.5,
+                            speed: 6.5,
                             max_number: 10,
                             operation: Operation::Add,
-                            num_ships: 2,
+                            num_ships: 5,
                         }],
                     },
                 ],

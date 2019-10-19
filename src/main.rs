@@ -110,6 +110,7 @@ struct TextState {
     won_text: graphics::Text,
     press_enter: graphics::Text,
     math_blaster: graphics::Text,
+    level_complete: graphics::Text,
 }
 struct MainState {
     messages: VecDeque<Message>,
@@ -124,6 +125,7 @@ struct MainState {
     background: Background,
     state: GameState,
     text: TextState,
+    lives: usize,
 }
 
 impl MainState {
@@ -140,6 +142,7 @@ impl MainState {
                 won_text: graphics::Text::new(("You Have Won", assets.main_font, 128.0)),
                 press_enter: graphics::Text::new(("Press Enter", assets.main_font, 42.0)),
                 math_blaster: graphics::Text::new(("Math Blaster", assets.title_font, 128.0)),
+                level_complete: graphics::Text::new(("Level Complete!",assets.title_font,128.0))
             },
             turret: Turret::new(&assets),
             assets: assets,
@@ -150,10 +153,14 @@ impl MainState {
             background: Background {},
             state: GameState::StartMenu,
             dt: std::time::Duration::new(0, 0),
+            lives:2
         })
     }
 
-    fn set_level(&mut self, level: usize, wave: usize) {
+    fn set_level_wave(&mut self, level: usize, wave: usize) {
+        if level > self.current_level {
+            self.state = GameState::LevelComplete;            
+        }
         self.current_level = level;
         self.current_wave = wave;
         self.target = None;
@@ -166,17 +173,17 @@ impl MainState {
             if self.current_level + 1 >= self.levels.len() {
                 self.state = GameState::Won;
             } else {                
-                self.assets.background = graphics::Image::new(ctx, self.levels[self.current_level+1].background_file.clone()).unwrap();
-                self.messages.push_back(Message::new(self.levels[self.current_level+1].title.clone(),3000.0,&self.assets));
-                self.set_level(self.current_level + 1, 0)
+                self.assets.background = graphics::Image::new(ctx, self.levels[self.current_level+1].background_file.clone()).unwrap();                
+                self.set_level_wave(self.current_level + 1, 0)
             }
         } else {
-            self.set_level(self.current_level, self.current_wave + 1);
+            self.set_level_wave(self.current_level, self.current_wave + 1);
         }
     }
     fn update_start_menu(&mut self, ctx: &mut Context) -> GameResult {
         if keyboard::is_key_pressed(ctx, KeyCode::Return) {
-            self.set_level(0, 0);
+            self.set_level_wave(0, 0);
+            self.lives = 2;
             self.turret = Turret::new(&self.assets);
             self.state = GameState::Playing;
         }
@@ -191,6 +198,7 @@ impl MainState {
     fn update_level_complete(&mut self, ctx: &mut Context) -> GameResult {
         if keyboard::is_key_pressed(ctx, KeyCode::Return) {
             self.state = GameState::Playing;
+            self.messages.push_back(Message::new(self.levels[self.current_level].title.clone(),3000.0,&self.assets));
         }
         Ok(())
     }
@@ -200,7 +208,7 @@ impl MainState {
         }
         Ok(())
     }
-    fn update_dying(&mut self, ctx: &mut Context) -> GameResult {
+    fn update_dying(&mut self, ctx: &mut Context) -> GameResult {        
         self.dt = timer::delta(ctx);
         for alien in &mut self.aliens {
             alien.update(ctx, self.dt);
@@ -214,8 +222,15 @@ impl MainState {
             .explosions
             .iter()
             .all(|splosion| splosion.elapsed - splosion.start_time > splosion.duration)
-        {
-            self.state = GameState::Dead;
+        {            
+            if self.lives > 0 {
+                self.lives -= 1;
+                self.turret = Turret::new(&self.assets);
+                self.set_level_wave(self.current_level,0);
+                self.state = GameState::Playing;
+            } else {
+                self.state = GameState::Dead;
+            }
         }
         Ok(())
     }
@@ -347,7 +362,7 @@ impl MainState {
         );
         let _ = graphics::draw(ctx, &self.assets.background, background_param);
         let text_pos = get_text_center(ctx, &self.text.press_enter);
-        let mut title_pos = get_text_center(ctx, &self.text.won_text);
+        let mut title_pos = get_text_center(ctx, &self.text.level_complete);
         title_pos[1] *= 0.5;
         let _ = graphics::draw(
             ctx,
@@ -358,7 +373,7 @@ impl MainState {
         );
         let _ = graphics::draw(
             ctx,
-            &self.text.won_text,
+            &self.text.level_complete,
             graphics::DrawParam::new()
                 .color(graphics::Color::from((0, 0, 255, 255)))
                 .dest(title_pos),
@@ -425,7 +440,9 @@ impl MainState {
         for alien in &mut self.aliens {
             alien.draw(ctx, &mut self.assets);
         }
+        
         self.turret.draw(ctx, &mut self.assets);
+        self.turret.draw_lives(self.lives,ctx,&mut self.assets);
 
         if !self.messages.is_empty() {
             self.messages[0].draw(ctx);
@@ -462,6 +479,7 @@ impl MainState {
             alien.draw(ctx, &mut self.assets);
         }
         self.turret.draw(ctx, &mut self.assets);
+        self.turret.draw_lives(self.lives,ctx,&mut self.assets);
         for i in 0..self.turret.explosions.len() {
             let mut pos = self.turret.get_screen_pos(graphics::size(ctx));
             pos[0] += ((10 + i % 2) as f32 / 100.0) * graphics::size(ctx).0;

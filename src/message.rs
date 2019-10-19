@@ -13,7 +13,7 @@ pub struct Message {
 impl Message {
     pub fn new(text:String,duration:f32,assets:&Assets) -> Message {
         Message {
-            text: graphics::Text::new((text, assets.main_font, 128.0)),
+            text: graphics::Text::new((text, assets.title_font, 64.0)),
             duration: duration,
             elapsed:0.0
         }
