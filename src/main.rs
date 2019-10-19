@@ -133,7 +133,8 @@ impl MainState {
         let levels = Level::new();
         let assets = Assets::new(ctx);
         let mut messages = VecDeque::new();
-        messages.push_back(Message::new(levels[0].title.clone(),3000.0,&assets));
+        messages.push_back(Message::new(levels[0].title.clone(),2000.0,&assets));
+        messages.push_back(Message::new("Wave 1".to_string(),2000.0,&assets));
         Ok(MainState {
             messages: messages,
             aliens: gen_aliens(&levels[0].waves[0], &assets.main_font),
@@ -178,6 +179,7 @@ impl MainState {
             }
         } else {
             self.set_level_wave(self.current_level, self.current_wave + 1);
+            self.messages.push_back(Message::new("Wave ".to_string()+&self.current_wave.to_string(),2000.0,&self.assets));
         }
     }
     fn update_start_menu(&mut self, ctx: &mut Context) -> GameResult {
@@ -198,7 +200,8 @@ impl MainState {
     fn update_level_complete(&mut self, ctx: &mut Context) -> GameResult {
         if keyboard::is_key_pressed(ctx, KeyCode::Return) {
             self.state = GameState::Playing;
-            self.messages.push_back(Message::new(self.levels[self.current_level].title.clone(),3000.0,&self.assets));
+            self.levels[self.current_level].push_title(&mut self.messages,&self.assets);
+            self.messages.push_back(Message::new("Wave 1".to_string(),2000.0,&self.assets));
         }
         Ok(())
     }
@@ -228,6 +231,7 @@ impl MainState {
                 self.turret = Turret::new(&self.assets);
                 self.set_level_wave(self.current_level,0);
                 self.state = GameState::Playing;
+                self.levels[self.current_level].push_title(&mut self.messages,&self.assets);
             } else {
                 self.state = GameState::Dead;
             }

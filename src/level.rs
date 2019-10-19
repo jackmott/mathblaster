@@ -1,3 +1,8 @@
+use crate::message::*;
+use crate::assets::*;
+
+use std::collections::VecDeque;
+
 #[derive(Debug, Copy, Clone)]
 pub enum Operation {
     Add,
@@ -22,6 +27,10 @@ pub struct WaveGroup {
 }
 
 impl Level {
+    pub fn push_title(&self, messages: &mut VecDeque<Message>, assets: &Assets) {
+           messages.push_back(Message::new(self.title.clone(),2000.0,assets));
+    }
+
     pub fn new() -> Vec<Level> {
         vec![
             //Level 1
