@@ -7,11 +7,20 @@ use crate::assets::*;
 use crate::explosion::*;
 use crate::ggez_utility::*;
 
+
+pub enum TurretState {
+    Firing (f32),
+    Resting,
+    //todo Rotating
+}
+
+
 pub struct Turret {
     pub rotation: f32,
     pub raw_text: String,
     pub text: graphics::Text,
     pub explosions: Vec<Explosion>,
+    pub state: TurretState
 }
 impl Scalable for Turret {
     fn get_pos(&self) -> na::Point2<f32> {
@@ -40,10 +49,23 @@ impl Turret {
             raw_text: "".to_string(),
             text: graphics::Text::new(("", assets.main_font, 24.0)),
             explosions: explosions,
+            state: TurretState::Resting,
         }
     }
 
-    pub fn update(&mut self, _ctx: &mut Context, _dt: std::time::Duration) {}
+    pub fn update(&mut self, _ctx: &mut Context, dt: std::time::Duration) {
+        self.state = 
+            match self.state {
+                TurretState::Firing(time_left) => {
+                    if time_left <= 0.0 {
+                        TurretState::Resting
+                    } else {
+                        TurretState::Firing(time_left-dt.as_millis() as f32)
+                    }
+                },
+                TurretState::Resting => TurretState::Resting
+            }
+    }
 
     pub fn draw(&self, ctx: &mut Context, assets: &mut Assets) {
         let param = DrawParam::new()

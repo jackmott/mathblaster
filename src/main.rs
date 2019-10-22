@@ -121,7 +121,7 @@ struct MainState {
     current_level: usize,
     current_wave: usize,
     turret: Turret,
-    target: Option<(usize, f32)>,
+    target: Option<usize>,
     background: Background,
     state: GameState,
     text: TextState,
@@ -150,12 +150,12 @@ impl MainState {
             levels: levels,
             current_level: 0,
             current_wave: 0,
-            target: None,
+            target: Some(0),
             background: Background {},
             state: GameState::StartMenu,
             dt: std::time::Duration::new(0, 0),
             lives:2
-        })
+        })        
     }
 
     fn set_level_wave(&mut self, level: usize, wave: usize) {
@@ -167,6 +167,7 @@ impl MainState {
         self.target = None;
         let wave = &self.levels[self.current_level].waves[self.current_wave];
         self.aliens = gen_aliens(wave, &self.assets.main_font);        
+        self.target = Some(0);
     }
     fn increment_level_wave(&mut self, ctx: &mut Context) {
         //if we were at the last wave already then go to next level
@@ -257,25 +258,18 @@ impl MainState {
         // If there is a target, rotate the turret to it
         match self.target {
             Some(target) => {
-                self.target = 
-                    if target.1 < 0.0 {  // target.1 == duration, laser time is over                        
-                        None
-                    } else {
-                        let turret_pos = self.turret.get_pos();
-                        let turret_vector: na::Vector2<f32> =
-                            na::Vector2::new(turret_pos[0], turret_pos[1]);
-                        let alien_pos = self.aliens[target.0].get_pos();
-                        let alien_vector = na::Vector2::new(alien_pos[0], alien_pos[1]);
-                        let v1 = na::Vector2::new(0.0, -1.0);
-                        let v2 = alien_vector - turret_vector;
-                        let mut angle = v2.angle(&v1);
-                        if alien_pos[0] < 0.5 {
-                            angle = -angle;
-                        }                        
-                        self.turret.rotation = angle;                    
-                        //target.0 is the index into the alien array
-                        Some((target.0, target.1 - self.dt.as_millis() as f32))
-                    };
+                let turret_pos = self.turret.get_pos();
+                let turret_vector: na::Vector2<f32> =
+                    na::Vector2::new(turret_pos[0], turret_pos[1]);
+                let alien_pos = self.aliens[target].get_pos();
+                let alien_vector = na::Vector2::new(alien_pos[0], alien_pos[1]);
+                let v1 = na::Vector2::new(0.0, -1.0);
+                let v2 = alien_vector - turret_vector;
+                let mut angle = v2.angle(&v1);
+                if alien_pos[0] < 0.5 {
+                    angle = -angle;
+                }                        
+                self.turret.rotation = angle;                    
             }
             None => (),
         };
@@ -424,18 +418,30 @@ impl MainState {
         // if we have a target, draw the laser line
         match self.target {
             Some(target) => {
-                println!("making a laser");
-                let laser = graphics::Mesh::new_line(
-                    ctx,
-                    &[
-                        self.turret.get_screen_pos(graphics::size(ctx)),
-                        self.aliens[target.0].get_screen_pos(graphics::size(ctx)),
-                    ],
-                    4.0,
-                    graphics::Color::from((255, 0, 0, 255)),
-                )
-                .unwrap();
-                let _ = graphics::draw(ctx, &laser, graphics::DrawParam::default());                
+                let alien = &self.aliens[target];
+                let crosshair_pos = to_screen_pos((alien.pos[0],alien.pos[1]),graphics::size(ctx));
+                let crosshair_param = graphics::DrawParam::new().dest(crosshair_pos);
+                println!("alien.pos {:?}",alien.pos);
+                let _ = graphics::draw(ctx,&self.assets.crosshair,crosshair_param);
+                                                                    
+                match self.turret.state {
+                    TurretState::Firing(_) =>
+                      {
+                        println!("making a laser");
+                        let laser = graphics::Mesh::new_line(
+                            ctx,
+                            &[
+                                self.turret.get_screen_pos(graphics::size(ctx)),
+                                alien.get_screen_pos(graphics::size(ctx)),
+                            ],
+                            4.0,
+                            graphics::Color::from((255, 0, 0, 255)),
+                        )
+                        .unwrap();
+                        let _ = graphics::draw(ctx, &laser, graphics::DrawParam::default());                
+                      },
+                      TurretState::Resting => ()
+                }
             }
             None => (),
         };
@@ -461,24 +467,6 @@ impl MainState {
                 .get_texture_scale(graphics::size(ctx), &self.assets),
         );
         let _ = graphics::draw(ctx, &self.assets.background, background_param);
-        match self.target {
-            Some(target) => {
-                println!("making a laser");
-                let laser = graphics::Mesh::new_line(
-                    ctx,
-                    &[
-                        self.turret.get_screen_pos(graphics::size(ctx)),
-                        self.aliens[target.0].get_screen_pos(graphics::size(ctx)),
-                    ],
-                    4.0,
-                    graphics::Color::from((255, 0, 0, 255)),
-                )
-                .unwrap();
-                let r = graphics::draw(ctx, &laser, graphics::DrawParam::default());
-                println!("err? : {:?}", r);
-            }
-            None => (),
-        };
         for alien in &mut self.aliens {
             alien.draw(ctx, &mut self.assets);
         }
@@ -543,7 +531,8 @@ impl event::EventHandler for MainState {
                 {
                     Some(i) => {
                         self.aliens[i].state = AlienState::Exploding;
-                        self.target = Some((i, 500.0));
+                        self.target = Some(i);
+                        self.turret.state = TurretState::Firing(500.0);
                         let _ = self.assets.explosion_sound.play_detached();
                     }
                     None => (),
