@@ -28,6 +28,7 @@ pub trait Scalable {
     }
 }
 
+
 pub fn to_screen_pos(pos: (f32,f32), screen_dimensions:(f32,f32)) -> na::Point2<f32> {        
         na::Point2::new(pos.0 * screen_dimensions.0, pos.1 * screen_dimensions.1)
 }

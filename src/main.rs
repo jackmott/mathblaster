@@ -1,5 +1,6 @@
-// todo scale crosshair properly
-
+// todo laser draws for one frame too long
+// todo consider pulsating/rotating crosshair
+//
 
 use ggez;
 use ggez::audio::SoundSource;
@@ -22,7 +23,9 @@ mod explosion;
 mod ggez_utility;
 mod level;
 mod turret;
+mod crosshair;
 
+use crate::crosshair::*;
 use crate::message::*;
 use crate::alien::*;
 use crate::assets::*;
@@ -139,7 +142,7 @@ struct MainState {
 
 impl MainState {
      fn new(ctx: &mut Context) -> GameResult<MainState> {
-        let levels = Level::new();
+        let levels = Level::load_from_file(ctx);
         let assets = Assets::new(ctx);
         let mut messages = VecDeque::new();
         messages.push_back(Message::new(levels[0].title.clone(),2000.0,&assets));
@@ -432,8 +435,13 @@ impl MainState {
 
                 //draw the crosshair on the target
                 let crosshair_pos = to_screen_pos((alien.pos[0],alien.pos[1]),graphics::size(ctx));
-                let crosshair_param = graphics::DrawParam::new().dest(crosshair_pos).offset(na::Point2::new(0.5, 0.5)).scale(na::Vector2::new(0.65,0.65)).color(Color::new(1.0,0.0,0.0,1.0));
-                let _ = graphics::draw(ctx,&self.assets.crosshair,crosshair_param);
+                let crosshair = Crosshair{};
+                let crosshair_params = graphics::DrawParam::new()
+                    .color(Color::from((255, 0, 0, 255)))
+                    .dest(crosshair_pos)
+                    .scale(crosshair.get_texture_scale(graphics::size(ctx), &self.assets))
+                    .offset(na::Point2::new(0.5, 0.5));
+                let _ = graphics::draw(ctx,&self.assets.crosshair,crosshair_params);
 
                 //draw the laser if the turret is firing                                   
                 match self.turret.state {
@@ -534,19 +542,16 @@ impl event::EventHandler for MainState {
         println!("key up: {:?}", keycode);
         if keycode == KeyCode::Return {
             match self.turret.raw_text.parse::<i32>() {
-                Ok(n) => match self
-                    .aliens
-                    .iter()
-                    .position(|alien| alien.answer == n && alien.state == AlienState::Alive)
-                {
-                    Some(i) => {
-                        self.aliens[i].state = AlienState::Exploding;
-                        self.target = Some(i);
-                        self.turret.state = TurretState::Firing(500.0);
-                        let _ = self.assets.explosion_sound.play_detached();
+                Ok(n) => 
+                    match self.target {
+                        Some(alien_index) if self.aliens[alien_index].answer == n =>
+                            {
+                                self.aliens[alien_index].state = AlienState::Exploding;
+                                let _ = self.assets.explosion_sound.play_detached();
+                                self.turret.state = TurretState::Firing(500.0);
+                            },
+                        _ => () //todo play some kind of sound or show a message that you were wrong?
                     }
-                    None => (),
-                },
                 Err(_) => (),
             }
             self.turret.raw_text = "".to_string();

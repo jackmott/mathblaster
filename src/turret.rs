@@ -14,7 +14,6 @@ pub enum TurretState {
     //todo Rotating
 }
 
-
 pub struct Turret {
     pub rotation: f32,
     pub raw_text: String,
@@ -89,7 +88,7 @@ impl Turret {
                 .color(Color::from((255, 255, 255, 255)))
                 .scale(scale*0.5)
                 .offset(na::Point2::new(0.5, 0.5))                
-                .dest(to_screen_pos((0.95 + 0.03*i as f32,0.95),graphics::size(ctx)));
+                .dest(to_screen_pos((0.95 + 0.03*i as f32,0.925),graphics::size(ctx)));
             let _ = graphics::draw(ctx, &assets.turret, param);
         }
         

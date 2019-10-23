@@ -1,9 +1,14 @@
 use crate::message::*;
 use crate::assets::*;
 
+use std::str;
+use std::io::{Read};
 use std::collections::VecDeque;
+use serde::{Serialize, Deserialize};
+use ggez::{Context};
+use ggez::filesystem;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Deserialize,Serialize,Debug, Copy, Clone)]
 pub enum Operation {
     Add,
     Subtract,
@@ -11,14 +16,19 @@ pub enum Operation {
     Divide,
 }
 
-pub struct Level {
+#[derive(Deserialize,Serialize)]
+    pub struct Level {
     pub waves: Vec<Wave>,
     pub background_file: String,
     pub title: String,
 }
+
+#[derive(Deserialize,Serialize)]
 pub struct Wave {
     pub groups: Vec<WaveGroup>,
 }
+
+#[derive(Deserialize,Serialize)]
 pub struct WaveGroup {
     pub speed: f32,
     pub max_number: i32,
@@ -30,8 +40,17 @@ impl Level {
     pub fn push_title(&self, messages: &mut VecDeque<Message>, assets: &Assets) {
            messages.push_back(Message::new(self.title.clone(),2000.0,assets));
     }
+    
+    pub fn load_from_file(ctx:&mut Context) -> Vec<Level> {
+        //todo if any of this fails, call new instead
+        let mut file = filesystem::open(ctx, "/levels.json").unwrap();
+        let mut buffer = Vec::new();
+        file.read_to_end(&mut buffer).unwrap(); 
+        serde_json::from_slice(&buffer[..]).unwrap()
+    }
 
     pub fn new() -> Vec<Level> {
+        let level = 
         vec![
             //Level 1
             Level {
@@ -119,6 +138,10 @@ impl Level {
                     },
                 ],
             },
-        ]
+        ];
+
+        // todo use this if file not found
+        // let serialized = serde_json::to_string_pretty(&level).unwrap();
+        level
     }
 }
