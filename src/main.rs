@@ -1,3 +1,6 @@
+// todo scale crosshair properly
+
+
 use ggez;
 use ggez::audio::SoundSource;
 use ggez::conf;
@@ -71,7 +74,7 @@ fn gen_aliens(wave: &Wave, font: &graphics::Font) -> Vec<Alien> {
             aliens.push(alien);
         }
     }
-    aliens.sort_by(|a, b| b.pos[1].partial_cmp(&a.pos[1]).unwrap());
+    aliens.sort_by(|a, b| a.pos[0].partial_cmp(&b.pos[0]).unwrap());
     aliens
 }
 
@@ -277,7 +280,7 @@ impl MainState {
                 }                        
                 self.turret.rotation = angle;                    
             },
-            Some(target) => self.target = get_first_living_alien(&self.aliens),
+            Some(_) => self.target = get_first_living_alien(&self.aliens),
             None => (),
         };
 
@@ -553,6 +556,40 @@ impl event::EventHandler for MainState {
             let _ = self.turret.raw_text.pop();
             self.turret.text =
                 graphics::Text::new((self.turret.raw_text.clone(), self.assets.main_font, 24.0));
+        } else if keycode == KeyCode::Left {
+            match self.target {
+                Some(index) if index > 0 =>
+                    {
+                        let mut new_index = index - 1;
+                        while self.aliens[new_index].state == AlienState::Dead && new_index > 0 {
+                            new_index -= 1;
+                        }
+                        if self.aliens[new_index].state != AlienState::Dead {
+                            self.target = Some(new_index);
+                        } else {
+                            self.target = None;
+                        }
+                    },
+                _ => ()
+            }
+        }
+        else if keycode == KeyCode::Right {
+            println!("left");
+            match self.target {
+                Some(index) if index < self.aliens.len() - 1 =>
+                    {
+                        let mut new_index = index + 1;
+                        while self.aliens[new_index].state == AlienState::Dead && new_index <= self.aliens.len() {
+                            new_index += 1;
+                        }
+                        if self.aliens[new_index].state != AlienState::Dead {
+                            self.target = Some(new_index);
+                        } else {
+                            self.target = None;
+                        }
+                    },
+                _ => ()
+            }
         }
     }
 }
@@ -570,7 +607,7 @@ pub fn main() -> GameResult {
         .add_resource_path(resource_dir)
         .window_mode(
             conf::WindowMode::default()
-                .fullscreen_type(conf::FullscreenType::True)
+                .fullscreen_type(conf::FullscreenType::Windowed)
                 .resizable(true),
         );
 
