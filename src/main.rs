@@ -2,7 +2,7 @@ use ggez;
 use ggez::audio::SoundSource;
 use ggez::conf;
 use ggez::event::{self, KeyCode, KeyMods};
-use ggez::graphics::{self};
+use ggez::graphics::{self,Color};
 use ggez::input::keyboard;
 use ggez::nalgebra as na;
 use ggez::timer;
@@ -28,6 +28,12 @@ use crate::ggez_utility::*;
 use crate::level::*;
 use crate::turret::*;
 
+fn get_first_living_alien(aliens: &Vec<Alien>) -> Option<usize> {
+    match aliens.iter().enumerate().find(|(_,alien)| alien.state != AlienState::Dead) {
+        Some ((index,_)) => Some(index),
+        None => None
+    }
+}
 
 fn gen_aliens(wave: &Wave, font: &graphics::Font) -> Vec<Alien> {
     let mut aliens: Vec<Alien> = Vec::new();
@@ -158,9 +164,10 @@ impl MainState {
         })        
     }
 
-    fn set_level_wave(&mut self, level: usize, wave: usize) {
+    fn set_level_wave(&mut self, level: usize, wave: usize,ctx:&mut Context) {
         if level > self.current_level {
             self.state = GameState::LevelComplete;            
+            self.assets.background = graphics::Image::new(ctx, self.levels[self.current_level+1].background_file.clone()).unwrap();                
         }
         self.current_level = level;
         self.current_wave = wave;
@@ -174,18 +181,17 @@ impl MainState {
         if self.current_wave + 1 >= self.levels[self.current_level].waves.len() {
             if self.current_level + 1 >= self.levels.len() {
                 self.state = GameState::Won;
-            } else {                
-                self.assets.background = graphics::Image::new(ctx, self.levels[self.current_level+1].background_file.clone()).unwrap();                
-                self.set_level_wave(self.current_level + 1, 0)
+            } else {                                
+                self.set_level_wave(self.current_level + 1, 0,ctx)
             }
         } else {
-            self.set_level_wave(self.current_level, self.current_wave + 1);
+            self.set_level_wave(self.current_level, self.current_wave + 1,ctx);
             self.messages.push_back(Message::new("Wave ".to_string()+&self.current_wave.to_string(),2000.0,&self.assets));
         }
     }
     fn update_start_menu(&mut self, ctx: &mut Context) -> GameResult {
         if keyboard::is_key_pressed(ctx, KeyCode::Return) {
-            self.set_level_wave(0, 0);
+            self.set_level_wave(0, 0,ctx);
             self.lives = 2;
             self.turret = Turret::new(&self.assets);
             self.state = GameState::Playing;
@@ -230,7 +236,7 @@ impl MainState {
             if self.lives > 0 {
                 self.lives -= 1;
                 self.turret = Turret::new(&self.assets);
-                self.set_level_wave(self.current_level,0);
+                self.set_level_wave(self.current_level,0,ctx);
                 self.state = GameState::Playing;
                 self.levels[self.current_level].push_title(&mut self.messages,&self.assets);
             } else {
@@ -257,7 +263,7 @@ impl MainState {
 
         // If there is a target, rotate the turret to it
         match self.target {
-            Some(target) => {
+            Some(target) if self.aliens[target].state != AlienState::Dead =>  {
                 let turret_pos = self.turret.get_pos();
                 let turret_vector: na::Vector2<f32> =
                     na::Vector2::new(turret_pos[0], turret_pos[1]);
@@ -270,7 +276,8 @@ impl MainState {
                     angle = -angle;
                 }                        
                 self.turret.rotation = angle;                    
-            }
+            },
+            Some(target) => self.target = get_first_living_alien(&self.aliens),
             None => (),
         };
 
@@ -415,15 +422,17 @@ impl MainState {
         );
         let _ = graphics::draw(ctx, &self.assets.background, background_param);
 
-        // if we have a target, draw the laser line
+        // if we have a target, draw the crosshair
         match self.target {
             Some(target) => {
                 let alien = &self.aliens[target];
+
+                //draw the crosshair on the target
                 let crosshair_pos = to_screen_pos((alien.pos[0],alien.pos[1]),graphics::size(ctx));
-                let crosshair_param = graphics::DrawParam::new().dest(crosshair_pos);
-                println!("alien.pos {:?}",alien.pos);
+                let crosshair_param = graphics::DrawParam::new().dest(crosshair_pos).offset(na::Point2::new(0.5, 0.5)).scale(na::Vector2::new(0.65,0.65)).color(Color::new(1.0,0.0,0.0,1.0));
                 let _ = graphics::draw(ctx,&self.assets.crosshair,crosshair_param);
-                                                                    
+
+                //draw the laser if the turret is firing                                   
                 match self.turret.state {
                     TurretState::Firing(_) =>
                       {
@@ -449,11 +458,9 @@ impl MainState {
         //draw the aliens, turrets, and messages
         for alien in &mut self.aliens {
             alien.draw(ctx, &mut self.assets);
-        }
-        
+        }                
         self.turret.draw(ctx, &mut self.assets);
         self.turret.draw_lives(self.lives,ctx,&mut self.assets);
-
         if !self.messages.is_empty() {
             self.messages[0].draw(ctx);
         }
@@ -478,7 +485,7 @@ impl MainState {
 
             self.turret.explosions[i].draw(ctx, &mut self.assets)
         }
-
+        //todo move this into the main draw funcrtion since we always just do this at the end?        
         graphics::present(ctx)?;
         Ok(())
     }
@@ -569,7 +576,9 @@ pub fn main() -> GameResult {
 
     let (ctx, event_loop) = &mut cb.build()?;
     let state = &mut MainState::new(ctx)?;
+    state.assets.explosion_sound.set_volume(0.05);
     state.assets.music.set_repeat(true);
+    state.assets.music.set_volume(0.01);
     let _ = state.assets.music.play_detached();
     state.dt = std::time::Duration::new(0, 0);
     println!("about to call run");
