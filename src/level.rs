@@ -2,11 +2,12 @@ use crate::message::*;
 use crate::assets::*;
 
 use std::str;
-use std::io::{Read};
+use std::io::{Read,Write};
 use std::collections::VecDeque;
 use serde::{Serialize, Deserialize};
 use ggez::{Context};
-use ggez::filesystem;
+use std::fs::File;
+use std::io::prelude::*;
 
 #[derive(Deserialize,Serialize,Debug, Copy, Clone)]
 pub enum Operation {
@@ -41,12 +42,29 @@ impl Level {
            messages.push_back(Message::new(self.title.clone(),2000.0,assets));
     }
     
-    pub fn load_from_file(ctx:&mut Context) -> Vec<Level> {
-        //todo if any of this fails, call new instead
-        let mut file = filesystem::open(ctx, "/levels.json").unwrap();
-        let mut buffer = Vec::new();
-        file.read_to_end(&mut buffer).unwrap(); 
-        serde_json::from_slice(&buffer[..]).unwrap()
+
+    pub fn load_from_file() -> Vec<Level> {
+        //if any of this fails, call new instead
+        fn load_helper() -> Result<Vec<Level>,String> {
+            let mut file = File::open("resources/levels.json").map_err(|e| format!("file not found\n {}",e))?;
+            let mut buffer = Vec::new();
+            file.read_to_end(&mut buffer).map_err(|e| format!("file could not be read\n{}",e))?; 
+            let level: Vec<Level> = serde_json::from_slice(&buffer[..]).map_err(|e| format!("file not valid\n{}",e))?;
+            Ok(level)
+        }
+       let result = load_helper();
+        match result {
+            Ok(levels) => levels,
+            Err(msg) => { // If we get an error, load the default and save a new levels.json file
+                println!("Error loading level file.\nUsing default\n{}",msg);
+                let level = Level::new();
+                let serialized = serde_json::to_string_pretty(&level).unwrap();
+                let mut file = File::create("resources/levels.json").unwrap();;
+                file.write_all(serialized.as_bytes()).unwrap();
+                level
+
+            }
+        }
     }
 
     pub fn new() -> Vec<Level> {
@@ -140,8 +158,6 @@ impl Level {
             },
         ];
 
-        // todo use this if file not found
-        // let serialized = serde_json::to_string_pretty(&level).unwrap();
-        level
+                level
     }
 }

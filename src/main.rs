@@ -142,7 +142,7 @@ struct MainState {
 
 impl MainState {
      fn new(ctx: &mut Context) -> GameResult<MainState> {
-        let levels = Level::load_from_file(ctx);
+        let levels = Level::load_from_file();
         let assets = Assets::new(ctx);
         let mut messages = VecDeque::new();
         messages.push_back(Message::new(levels[0].title.clone(),2000.0,&assets));
