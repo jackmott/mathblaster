@@ -1,0 +1,92 @@
+[
+  {
+    "waves": [
+      {
+        "groups": [
+          {
+            "speed": 1.5,
+            "max_number": 5,
+            "operation": "Add",
+            "num_ships": 5
+          }
+        ]
+      },
+      {
+        "groups": [
+          {
+            "speed": 2.5,
+            "max_number": 5,
+            "operation": "Add",
+            "num_ships": 5
+          }
+        ]
+      },
+      {
+        "groups": [
+          {
+            "speed": 1.5,
+            "max_number": 10,
+            "operation": "Add",
+            "num_ships": 5
+          }
+        ]
+      }
+    ],
+    "background_file": "/spacebg1.jpg",
+    "title": "Addition Attack!"
+  },
+  {
+    "waves": [
+      {
+        "groups": [
+          {
+            "speed": 1.5,
+            "max_number": 5,
+            "operation": "Subtract",
+            "num_ships": 10
+          },
+          {
+            "speed": 2.5,
+            "max_number": 5,
+            "operation": "Add",
+            "num_ships": 3
+          }
+        ]
+      },
+      {
+        "groups": [
+          {
+            "speed": 2.5,
+            "max_number": 5,
+            "operation": "Subtract",
+            "num_ships": 10
+          },
+          {
+            "speed": 3.5,
+            "max_number": 5,
+            "operation": "Add",
+            "num_ships": 3
+          }
+        ]
+      },
+      {
+        "groups": [
+          {
+            "speed": 1.5,
+            "max_number": 10,
+            "operation": "Subtract",
+            "num_ships": 10
+          },
+          {
+            "speed": 2.5,
+            "max_number": 10,
+            "operation": "Add",
+            "num_ships": 3
+          }
+        ]
+      }
+    ],
+    "background_file": "/spacebg2.jpg",
+    "title": "Subtraction Subterfuge"
+  }
+]
