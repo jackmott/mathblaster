@@ -23,7 +23,7 @@ impl Assets {
             add_ship: graphics::Image::new(ctx, "/add-ship.png").unwrap(),
             sub_ship: graphics::Image::new(ctx, "/sub-ship.png").unwrap(),
             mul_ship: graphics::Image::new(ctx, "/mul-ship.png").unwrap(),
-            crosshair: graphics::Image::new(ctx,"/crosshair.png").unwrap(),
+            crosshair: graphics::Image::new(ctx, "/crosshair.png").unwrap(),
             div_ship: graphics::Image::new(ctx, "/div-ship.png").unwrap(),
             title_font: graphics::Font::new(ctx, "/title.ttf").unwrap(),
             main_font: graphics::Font::new(ctx, "/main.ttf").unwrap(),

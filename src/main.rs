@@ -1,4 +1,3 @@
-// todo laser draws for one frame too long
 // todo consider pulsating/rotating crosshair
 //
 
@@ -6,39 +5,53 @@ use ggez;
 use ggez::audio::SoundSource;
 use ggez::conf;
 use ggez::event::{self, KeyCode, KeyMods};
-use ggez::graphics::{self,Color};
+use ggez::graphics::{self, Color};
 use ggez::input::keyboard;
 use ggez::nalgebra as na;
 use ggez::timer;
 use ggez::{Context, GameResult};
 use rand::*;
+use std::collections::VecDeque;
 use std::env;
 use std::path;
-use std::collections::VecDeque;
 
-mod message;
 mod alien;
 mod assets;
+mod crosshair;
 mod explosion;
 mod ggez_utility;
 mod level;
+mod message;
 mod turret;
-mod crosshair;
 
-use crate::crosshair::*;
-use crate::message::*;
 use crate::alien::*;
 use crate::assets::*;
+use crate::crosshair::*;
 use crate::explosion::*;
 use crate::ggez_utility::*;
 use crate::level::*;
+use crate::message::*;
 use crate::turret::*;
 
 fn get_first_living_alien(aliens: &Vec<Alien>) -> Option<usize> {
-    match aliens.iter().enumerate().find(|(_,alien)| alien.state != AlienState::Dead) {
-        Some ((index,_)) => Some(index),
-        None => None
-    }
+    aliens
+        .iter()
+        .position(|alien| alien.state != AlienState::Dead)
+        
+}
+
+fn get_lowest_living_alien(aliens: &Vec<Alien>) -> Option<usize> {
+    match aliens
+            .iter()            
+            .enumerate()  
+            .filter(|(_,alien)| alien.state != AlienState::Dead)
+            .max_by_key(|(_,alien)| {
+                    (alien.pos[1] * 1000.0) as i32
+            })
+            {
+                Some( (index,_) ) => Some(index) ,
+                None => None
+            }
 }
 
 fn gen_aliens(wave: &Wave, font: &graphics::Font) -> Vec<Alien> {
@@ -138,66 +151,79 @@ struct MainState {
     state: GameState,
     text: TextState,
     lives: usize,
+    crosshair:Crosshair,
 }
 
 impl MainState {
-     fn new(ctx: &mut Context) -> GameResult<MainState> {
+    fn new(ctx: &mut Context) -> GameResult<MainState> {
         let levels = Level::load_from_file();
         let assets = Assets::new(ctx);
         let mut messages = VecDeque::new();
-        messages.push_back(Message::new(levels[0].title.clone(),2000.0,&assets));
-        messages.push_back(Message::new("Wave 1".to_string(),2000.0,&assets));
+        messages.push_back(Message::new(levels[0].title.clone(), 2000.0, &assets));
+        messages.push_back(Message::new("Wave 1".to_string(), 2000.0, &assets));
+        let aliens = gen_aliens(&levels[0].waves[0], &assets.main_font);
+        let target = get_lowest_living_alien(&aliens);
+
         Ok(MainState {
             messages: messages,
-            aliens: gen_aliens(&levels[0].waves[0], &assets.main_font),
+            aliens: aliens,
             text: TextState {
                 dead_text: graphics::Text::new(("You Have Died", assets.title_font, 128.0)),
                 won_text: graphics::Text::new(("You Have Won", assets.main_font, 128.0)),
                 press_enter: graphics::Text::new(("Press Enter", assets.main_font, 42.0)),
                 math_blaster: graphics::Text::new(("Math Blaster", assets.title_font, 128.0)),
-                level_complete: graphics::Text::new(("Level Complete!",assets.title_font,128.0))
+                level_complete: graphics::Text::new(("Level Complete!", assets.title_font, 128.0)),
             },
             turret: Turret::new(&assets),
             assets: assets,
             levels: levels,
             current_level: 0,
             current_wave: 0,
-            target: Some(0),
+            target: target,
             background: Background {},
             state: GameState::StartMenu,
             dt: std::time::Duration::new(0, 0),
-            lives:2
-        })        
+            lives: 2,
+            crosshair:Crosshair { elapsed: 0 },
+        })
     }
 
-    fn set_level_wave(&mut self, level: usize, wave: usize,ctx:&mut Context) {
+    fn set_level_wave(&mut self, level: usize, wave: usize, ctx: &mut Context) {
         if level > self.current_level {
-            self.state = GameState::LevelComplete;            
-            self.assets.background = graphics::Image::new(ctx, self.levels[self.current_level+1].background_file.clone()).unwrap();                
+            self.state = GameState::LevelComplete;
+            self.assets.background = graphics::Image::new(
+                ctx,
+                self.levels[self.current_level + 1].background_file.clone(),
+            )
+            .unwrap();
         }
         self.current_level = level;
         self.current_wave = wave;
         self.target = None;
         let wave = &self.levels[self.current_level].waves[self.current_wave];
-        self.aliens = gen_aliens(wave, &self.assets.main_font);        
-        self.target = Some(0);
+        self.aliens = gen_aliens(wave, &self.assets.main_font);
+        self.target = get_lowest_living_alien(&self.aliens);
     }
     fn increment_level_wave(&mut self, ctx: &mut Context) {
         //if we were at the last wave already then go to next level
         if self.current_wave + 1 >= self.levels[self.current_level].waves.len() {
             if self.current_level + 1 >= self.levels.len() {
                 self.state = GameState::Won;
-            } else {                                
-                self.set_level_wave(self.current_level + 1, 0,ctx)
+            } else {
+                self.set_level_wave(self.current_level + 1, 0, ctx)
             }
         } else {
-            self.set_level_wave(self.current_level, self.current_wave + 1,ctx);
-            self.messages.push_back(Message::new("Wave ".to_string()+&self.current_wave.to_string(),2000.0,&self.assets));
+            self.set_level_wave(self.current_level, self.current_wave + 1, ctx);
+            self.messages.push_back(Message::new(
+                "Wave ".to_string() + &self.current_wave.to_string(),
+                2000.0,
+                &self.assets,
+            ));
         }
     }
     fn update_start_menu(&mut self, ctx: &mut Context) -> GameResult {
         if keyboard::is_key_pressed(ctx, KeyCode::Return) {
-            self.set_level_wave(0, 0,ctx);
+            self.set_level_wave(0, 0, ctx);
             self.lives = 2;
             self.turret = Turret::new(&self.assets);
             self.state = GameState::Playing;
@@ -213,8 +239,9 @@ impl MainState {
     fn update_level_complete(&mut self, ctx: &mut Context) -> GameResult {
         if keyboard::is_key_pressed(ctx, KeyCode::Return) {
             self.state = GameState::Playing;
-            self.levels[self.current_level].push_title(&mut self.messages,&self.assets);
-            self.messages.push_back(Message::new("Wave 1".to_string(),2000.0,&self.assets));
+            self.levels[self.current_level].push_title(&mut self.messages, &self.assets);
+            self.messages
+                .push_back(Message::new("Wave 1".to_string(), 2000.0, &self.assets));
         }
         Ok(())
     }
@@ -224,10 +251,10 @@ impl MainState {
         }
         Ok(())
     }
-    fn update_dying(&mut self, ctx: &mut Context) -> GameResult {        
+    fn update_dying(&mut self, ctx: &mut Context) -> GameResult {
         self.dt = timer::delta(ctx);
         for alien in &mut self.aliens {
-            alien.update(ctx, self.dt);
+            alien.update(&mut self.turret,ctx, self.dt);
         }
         self.turret.update(ctx, self.dt);
         for splosion in &mut self.turret.explosions {
@@ -238,13 +265,13 @@ impl MainState {
             .explosions
             .iter()
             .all(|splosion| splosion.elapsed - splosion.start_time > splosion.duration)
-        {            
+        {
             if self.lives > 0 {
                 self.lives -= 1;
                 self.turret = Turret::new(&self.assets);
-                self.set_level_wave(self.current_level,0,ctx);
+                self.set_level_wave(self.current_level, 0, ctx);
                 self.state = GameState::Playing;
-                self.levels[self.current_level].push_title(&mut self.messages,&self.assets);
+                self.levels[self.current_level].push_title(&mut self.messages, &self.assets);
             } else {
                 self.state = GameState::Dead;
             }
@@ -255,9 +282,11 @@ impl MainState {
     fn update_playing(&mut self, ctx: &mut Context) -> GameResult {
         self.dt = timer::delta(ctx);
 
+        self.crosshair.update(self.dt);
+
         //update aliens and turret, and message queue
         for alien in &mut self.aliens {
-            alien.update(ctx, self.dt);
+            alien.update(&mut self.turret, ctx, self.dt);
         }
         self.turret.update(ctx, self.dt);
         if !self.messages.is_empty() {
@@ -269,7 +298,7 @@ impl MainState {
 
         // If there is a target, rotate the turret to it
         match self.target {
-            Some(target) if self.aliens[target].state != AlienState::Dead =>  {
+            Some(target) if self.aliens[target].state != AlienState::Dead => {
                 let turret_pos = self.turret.get_pos();
                 let turret_vector: na::Vector2<f32> =
                     na::Vector2::new(turret_pos[0], turret_pos[1]);
@@ -280,9 +309,9 @@ impl MainState {
                 let mut angle = v2.angle(&v1);
                 if alien_pos[0] < 0.5 {
                     angle = -angle;
-                }                        
-                self.turret.rotation = angle;                    
-            },
+                }
+                self.turret.rotation = angle;
+            }
             Some(_) => self.target = get_first_living_alien(&self.aliens),
             None => (),
         };
@@ -310,7 +339,7 @@ impl MainState {
         {
             self.increment_level_wave(ctx);
         }
-        
+
         Ok(())
     }
     fn draw_start_menu(&mut self, ctx: &mut Context) -> GameResult {
@@ -366,7 +395,7 @@ impl MainState {
         Ok(())
     }
 
-     fn draw_level_complete(&mut self, ctx: &mut Context) -> GameResult {
+    fn draw_level_complete(&mut self, ctx: &mut Context) -> GameResult {
         let background_param = graphics::DrawParam::new().scale(
             self.background
                 .get_texture_scale(graphics::size(ctx), &self.assets),
@@ -420,7 +449,6 @@ impl MainState {
         Ok(())
     }
     fn draw_playing(&mut self, ctx: &mut Context) -> GameResult {
-
         //Draw the background
         let background_param = graphics::DrawParam::new().scale(
             self.background
@@ -434,20 +462,12 @@ impl MainState {
                 let alien = &self.aliens[target];
 
                 //draw the crosshair on the target
-                let crosshair_pos = to_screen_pos((alien.pos[0],alien.pos[1]),graphics::size(ctx));
-                let crosshair = Crosshair{};
-                let crosshair_params = graphics::DrawParam::new()
-                    .color(Color::from((255, 0, 0, 255)))
-                    .dest(crosshair_pos)
-                    .scale(crosshair.get_texture_scale(graphics::size(ctx), &self.assets))
-                    .offset(na::Point2::new(0.5, 0.5));
-                let _ = graphics::draw(ctx,&self.assets.crosshair,crosshair_params);
-
-                //draw the laser if the turret is firing                                   
+                let crosshair_pos =
+                    to_screen_pos((alien.pos[0], alien.pos[1]), graphics::size(ctx));
+                self.crosshair.draw(crosshair_pos,ctx,&self.assets); 
+                //draw the laser if the turret is firing
                 match self.turret.state {
-                    TurretState::Firing(_) =>
-                      {
-                        println!("making a laser");
+                    TurretState::Firing => {
                         let laser = graphics::Mesh::new_line(
                             ctx,
                             &[
@@ -458,9 +478,9 @@ impl MainState {
                             graphics::Color::from((255, 0, 0, 255)),
                         )
                         .unwrap();
-                        let _ = graphics::draw(ctx, &laser, graphics::DrawParam::default());                
-                      },
-                      TurretState::Resting => ()
+                        let _ = graphics::draw(ctx, &laser, graphics::DrawParam::default());
+                    }
+                    TurretState::Resting => (),
                 }
             }
             None => (),
@@ -469,9 +489,9 @@ impl MainState {
         //draw the aliens, turrets, and messages
         for alien in &mut self.aliens {
             alien.draw(ctx, &mut self.assets);
-        }                
+        }
         self.turret.draw(ctx, &mut self.assets);
-        self.turret.draw_lives(self.lives,ctx,&mut self.assets);
+        self.turret.draw_lives(self.lives, ctx, &mut self.assets);
         if !self.messages.is_empty() {
             self.messages[0].draw(ctx);
         }
@@ -489,14 +509,14 @@ impl MainState {
             alien.draw(ctx, &mut self.assets);
         }
         self.turret.draw(ctx, &mut self.assets);
-        self.turret.draw_lives(self.lives,ctx,&mut self.assets);
+        self.turret.draw_lives(self.lives, ctx, &mut self.assets);
         for i in 0..self.turret.explosions.len() {
             let mut pos = self.turret.get_screen_pos(graphics::size(ctx));
             pos[0] += ((10 + i % 2) as f32 / 100.0) * graphics::size(ctx).0;
 
             self.turret.explosions[i].draw(ctx, &mut self.assets)
         }
-        //todo move this into the main draw funcrtion since we always just do this at the end?        
+        //todo move this into the main draw funcrtion since we always just do this at the end?
         graphics::present(ctx)?;
         Ok(())
     }
@@ -520,7 +540,7 @@ impl event::EventHandler for MainState {
             GameState::Dying => self.draw_dying(ctx),
             GameState::Dead => self.draw_dead(ctx),
             GameState::Won => self.draw_won(ctx),
-            GameState::LevelComplete => self.draw_level_complete(ctx)
+            GameState::LevelComplete => self.draw_level_complete(ctx),
         }
     }
     fn resize_event(&mut self, ctx: &mut Context, width: f32, height: f32) {
@@ -542,16 +562,14 @@ impl event::EventHandler for MainState {
         println!("key up: {:?}", keycode);
         if keycode == KeyCode::Return {
             match self.turret.raw_text.parse::<i32>() {
-                Ok(n) => 
-                    match self.target {
-                        Some(alien_index) if self.aliens[alien_index].answer == n =>
-                            {
-                                self.aliens[alien_index].state = AlienState::Exploding;
-                                let _ = self.assets.explosion_sound.play_detached();
-                                self.turret.state = TurretState::Firing(500.0);
-                            },
-                        _ => () //todo play some kind of sound or show a message that you were wrong?
+                Ok(n) => match self.target {
+                    Some(alien_index) if self.aliens[alien_index].answer == n => {
+                        self.aliens[alien_index].state = AlienState::Exploding;
+                        let _ = self.assets.explosion_sound.play_detached();
+                        self.turret.state = TurretState::Firing;
                     }
+                    _ => (), //todo play some kind of sound or show a message that you were wrong?
+                },
                 Err(_) => (),
             }
             self.turret.raw_text = "".to_string();
@@ -563,37 +581,36 @@ impl event::EventHandler for MainState {
                 graphics::Text::new((self.turret.raw_text.clone(), self.assets.main_font, 24.0));
         } else if keycode == KeyCode::Left {
             match self.target {
-                Some(index) if index > 0 =>
-                    {
-                        let mut new_index = index - 1;
-                        while self.aliens[new_index].state == AlienState::Dead && new_index > 0 {
-                            new_index -= 1;
-                        }
-                        if self.aliens[new_index].state != AlienState::Dead {
-                            self.target = Some(new_index);
-                        } else {
-                            self.target = None;
-                        }
-                    },
-                _ => ()
+                Some(index) if index > 0 => {
+                    let mut new_index = index - 1;
+                    while self.aliens[new_index].state == AlienState::Dead && new_index > 0 {
+                        new_index -= 1;
+                    }
+                    if self.aliens[new_index].state != AlienState::Dead {
+                        self.target = Some(new_index);
+                    } else {
+                        self.target = None;
+                    }
+                }
+                _ => (),
             }
-        }
-        else if keycode == KeyCode::Right {
+        } else if keycode == KeyCode::Right {
             println!("left");
             match self.target {
-                Some(index) if index < self.aliens.len() - 1 =>
+                Some(index) if index < self.aliens.len() - 1 => {
+                    let mut new_index = index + 1;
+                    while self.aliens[new_index].state == AlienState::Dead
+                        && new_index <= self.aliens.len()
                     {
-                        let mut new_index = index + 1;
-                        while self.aliens[new_index].state == AlienState::Dead && new_index <= self.aliens.len() {
-                            new_index += 1;
-                        }
-                        if self.aliens[new_index].state != AlienState::Dead {
-                            self.target = Some(new_index);
-                        } else {
-                            self.target = None;
-                        }
-                    },
-                _ => ()
+                        new_index += 1;
+                    }
+                    if self.aliens[new_index].state != AlienState::Dead {
+                        self.target = Some(new_index);
+                    } else {
+                        self.target = None;
+                    }
+                }
+                _ => (),
             }
         }
     }

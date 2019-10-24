@@ -28,9 +28,8 @@ pub trait Scalable {
     }
 }
 
-
-pub fn to_screen_pos(pos: (f32,f32), screen_dimensions:(f32,f32)) -> na::Point2<f32> {        
-        na::Point2::new(pos.0 * screen_dimensions.0, pos.1 * screen_dimensions.1)
+pub fn to_screen_pos(pos: (f32, f32), screen_dimensions: (f32, f32)) -> na::Point2<f32> {
+    na::Point2::new(pos.0 * screen_dimensions.0, pos.1 * screen_dimensions.1)
 }
 
 pub fn get_text_center(ctx: &mut Context, text: &graphics::Text) -> na::Point2<f32> {
@@ -40,4 +39,8 @@ pub fn get_text_center(ctx: &mut Context, text: &graphics::Text) -> na::Point2<f
         window_dim.0 / 2.0 - text_dim.0 as f32 / 2.0,
         window_dim.1 / 2.0 - text_dim.1 as f32 / 2.0,
     )
+}
+
+pub fn lerp(a:f32,b:f32,pct:f32) -> f32 {
+    a * (1.0-pct) + b*pct
 }

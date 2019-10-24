@@ -5,6 +5,7 @@ use crate::assets::*;
 use crate::explosion::*;
 use crate::ggez_utility::*;
 use crate::level::*;
+use crate::turret::*;
 use ggez::Context;
 
 #[derive(PartialEq)]
@@ -41,7 +42,7 @@ impl Scalable for Alien {
     }
 }
 impl Alien {
-    pub fn update(&mut self, ctx: &mut Context, dt: std::time::Duration) {
+    pub fn update(&mut self,turret:&mut Turret,ctx: &mut Context, dt: std::time::Duration) {
         if self.state != AlienState::Dead {
             let sec = dt.as_millis() as f32 / 100000.0;
             if self.pos[1] < 0.07 {
@@ -54,6 +55,7 @@ impl Alien {
             }
             if self.explosion.elapsed > self.explosion.duration {
                 self.state = AlienState::Dead;
+                turret.state = TurretState::Resting;
             }
         }
     }
