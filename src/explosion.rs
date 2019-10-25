@@ -25,10 +25,6 @@ impl Explosion {
         }
     }
     pub fn get_rect(&self) -> graphics::Rect {
-        println!(
-            "index:{} elapsed:{} start:{} duration:{}",
-            self.index, self.elapsed, self.start_time, self.duration
-        );
         let index = 15 - self.index; //reverse the order
         let x = index % 4;
         let y = index / 4;
@@ -48,7 +44,6 @@ impl Explosion {
                 if index > 15 {
                     index = 15 + (15 - index);
                 }
-                println!("index in update:{}", index);
                 self.index = index as usize;
             }
         }

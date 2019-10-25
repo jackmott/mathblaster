@@ -1,5 +1,3 @@
-// todo consider pulsating/rotating crosshair
-//
 
 use ggez;
 use ggez::audio::SoundSource;
@@ -59,8 +57,21 @@ fn gen_aliens(wave: &Wave, font: &graphics::Font) -> Vec<Alien> {
     let mut rng = rand::thread_rng();
     for group in &wave.groups {
         for i in 0..group.num_ships {
-            let num1 = rng.gen_range(0, group.max_number);
-            let num2 = rng.gen_range(0, group.max_number); //todo with division add some logic
+            
+            let (num1,num2) = 
+                if group.operation == Operation::Divide {
+                   let mut a;
+                   let mut b;
+                   loop {
+                       a = rng.gen_range(group.min_number,group.max_number);
+                       b = if a == group.min_number { a } else {rng.gen_range(group.min_number,a)};
+                       if b == 0 { continue; }
+                       if a % b == 0 { break;  }
+                    }               
+                   (a,b)
+                } else {
+                    (rng.gen_range(group.min_number,group.max_number),rng.gen_range(group.min_number,group.max_number))
+                };
 
             let (answer, op) = match group.operation {
                 Operation::Add => (num1 + num2, "+"),
@@ -312,7 +323,7 @@ impl MainState {
                 }
                 self.turret.rotation = angle;
             }
-            Some(_) => self.target = get_first_living_alien(&self.aliens),
+            Some(_) => self.target = get_lowest_living_alien(&self.aliens),
             None => (),
         };
 
@@ -581,35 +592,25 @@ impl event::EventHandler for MainState {
                 graphics::Text::new((self.turret.raw_text.clone(), self.assets.main_font, 24.0));
         } else if keycode == KeyCode::Left {
             match self.target {
-                Some(index) if index > 0 => {
-                    let mut new_index = index - 1;
-                    while self.aliens[new_index].state == AlienState::Dead && new_index > 0 {
-                        new_index -= 1;
-                    }
-                    if self.aliens[new_index].state != AlienState::Dead {
-                        self.target = Some(new_index);
-                    } else {
-                        self.target = None;
-                    }
-                }
+                Some(index) => 
+                    if self.aliens.iter().any(|alien| alien.state == AlienState::Alive && alien.pos[1] >= 0.0) {
+                        let mut i = 
+                            if index == 0 { self.aliens.len()-1 } else { index-1 };
+                        while self.aliens[i].state != AlienState::Alive || self.aliens[i].pos[1] < 0.0{ i= if i == 0 { self.aliens.len()-1 } else { i-1 }};
+                        self.target = Some(i);
+                    }, 
                 _ => (),
             }
         } else if keycode == KeyCode::Right {
             println!("left");
             match self.target {
-                Some(index) if index < self.aliens.len() - 1 => {
-                    let mut new_index = index + 1;
-                    while self.aliens[new_index].state == AlienState::Dead
-                        && new_index <= self.aliens.len()
-                    {
-                        new_index += 1;
-                    }
-                    if self.aliens[new_index].state != AlienState::Dead {
-                        self.target = Some(new_index);
-                    } else {
-                        self.target = None;
-                    }
-                }
+                Some(index) => 
+                    if self.aliens.iter().any(|alien| alien.state == AlienState::Alive && alien.pos[1] > 0.0) {
+                        let mut i = (index+1) % self.aliens.len();
+                        while self.aliens[i].state != AlienState::Alive || self.aliens[i].pos[1] < 0.0 { i= (i +1) % self.aliens.len() ; }
+                        self.target = Some(i);
+                    },
+                
                 _ => (),
             }
         }

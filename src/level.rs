@@ -7,7 +7,7 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::str;
 
-#[derive(Deserialize, Serialize, Debug, Copy, Clone)]
+#[derive(Deserialize, Serialize, Debug, Copy, Clone,PartialEq)]
 pub enum Operation {
     Add,
     Subtract,
@@ -31,6 +31,7 @@ pub struct Wave {
 pub struct WaveGroup {
     pub speed: f32,
     pub max_number: i32,
+    pub min_number: i32,
     pub operation: Operation,
     pub num_ships: usize,
 }
@@ -67,6 +68,7 @@ impl Level {
         }
     }
 
+    // consider validating max_number to be sure it makes sense
     pub fn new() -> Vec<Level> {
         let level = vec![
             //Level 1
@@ -76,16 +78,18 @@ impl Level {
                 waves: vec![
                     Wave {
                         groups: vec![WaveGroup {
-                            speed: 1.5,
-                            max_number: 5,
-                            operation: Operation::Add,
-                            num_ships: 5,
+                            speed: 5.5,
+                            max_number: 10,
+                            min_number:0,
+                            operation: Operation::Divide,
+                            num_ships: 10,
                         }],
                     },
                     Wave {
                         groups: vec![WaveGroup {
                             speed: 2.5,
                             max_number: 5,
+                            min_number:0,
                             operation: Operation::Add,
                             num_ships: 5,
                         }],
@@ -94,6 +98,7 @@ impl Level {
                         groups: vec![WaveGroup {
                             speed: 1.5,
                             max_number: 10,
+                            min_number:0,
                             operation: Operation::Add,
                             num_ships: 5,
                         }],
@@ -110,12 +115,14 @@ impl Level {
                             WaveGroup {
                                 speed: 1.5,
                                 max_number: 5,
+                                min_number:0,
                                 operation: Operation::Subtract,
                                 num_ships: 10,
                             },
                             WaveGroup {
                                 speed: 2.5,
                                 max_number: 5,
+                                min_number:0,
                                 operation: Operation::Add,
                                 num_ships: 3,
                             },
@@ -126,12 +133,14 @@ impl Level {
                             WaveGroup {
                                 speed: 2.5,
                                 max_number: 5,
+                                min_number:0,
                                 operation: Operation::Subtract,
                                 num_ships: 10,
                             },
                             WaveGroup {
                                 speed: 3.5,
                                 max_number: 5,
+                                min_number:0,
                                 operation: Operation::Add,
                                 num_ships: 3,
                             },
@@ -142,12 +151,14 @@ impl Level {
                             WaveGroup {
                                 speed: 1.5,
                                 max_number: 10,
+                                min_number:0,
                                 operation: Operation::Subtract,
                                 num_ships: 10,
                             },
                             WaveGroup {
                                 speed: 2.5,
                                 max_number: 10,
+                                min_number: 0,
                                 operation: Operation::Add,
                                 num_ships: 3,
                             },
