@@ -4,15 +4,10 @@ use ggez::Context;
 
 use crate::assets::*;
 
-pub fn white() -> graphics::Color {
-    graphics::Color::from((255,255,255,255))
-}
-pub fn blue() -> graphics::Color {
-    graphics::Color::from((0,0,255,255))
-}
-pub fn gray() -> graphics::Color {
-    graphics::Color::from((128,128,128,255))
-}
+pub const WHITE : Color = Color {r:1.0,g:1.0,b:1.0,a:1.0};
+pub const BLUE : Color = Color {r:0.0,g:0.0,b:1.0,a:1.0};
+pub const GRAY : Color = Color {r:0.5,g:0.5,b:0.5,a:1.0};
+pub const DARK_GRAY : Color = Color {r:0.25,g:0.25,b:0.25,a:1.0};
 
 pub trait Scalable {
     fn pct_dimensions(&self) -> (f32, f32);

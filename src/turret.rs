@@ -59,14 +59,14 @@ impl Turret {
 
     pub fn draw(&self, ctx: &mut Context, assets: &mut Assets) {
         let param = DrawParam::new()
-            .color(white())
+            .color(WHITE)
             .scale(self.scale(graphics::size(ctx)))
             .offset(na::Point2::new(0.5, 0.5))
             .rotation(self.rotation)
             .dest(self.pixel_pos(graphics::size(ctx)));
         let _ = graphics::draw(ctx, &assets.turret, param);
         let text_param = DrawParam::new()
-            .color(white())
+            .color(WHITE)
             .dest(self.pixel_pos(graphics::size(ctx)));
         let _ = graphics::draw(ctx, &self.text, text_param);
     }
@@ -76,7 +76,7 @@ impl Turret {
 
         for i in 0..lives {
             let param = DrawParam::new()
-                .color(white())
+                .color(WHITE)
                 .scale(scale * 0.5)
                 .offset(na::Point2::new(0.5, 0.5))
                 .dest(to_screen_pos(

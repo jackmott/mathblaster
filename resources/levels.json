@@ -36,7 +36,7 @@
       }
     ],
     "background_file": "/spacebg1.jpg",
-    "title": "Addition Attack!"
+    "title": "Addition Attack"
   },
   {
     "waves": [
@@ -97,5 +97,125 @@
     ],
     "background_file": "/spacebg2.jpg",
     "title": "Subtraction Subterfuge"
+  },
+  {
+    "waves": [
+      {
+        "groups": [
+          {
+            "speed": 1.5,
+            "max_number": 5,
+            "min_number": 0,
+            "operation": "Subtract",
+            "num_ships": 10
+          },
+          {
+            "speed": 2.5,
+            "max_number": 5,
+            "min_number": 0,
+            "operation": "Add",
+            "num_ships": 3
+          }
+        ]
+      },
+      {
+        "groups": [
+          {
+            "speed": 2.5,
+            "max_number": 5,
+            "min_number": 0,
+            "operation": "Subtract",
+            "num_ships": 10
+          },
+          {
+            "speed": 3.5,
+            "max_number": 5,
+            "min_number": 0,
+            "operation": "Add",
+            "num_ships": 3
+          }
+        ]
+      },
+      {
+        "groups": [
+          {
+            "speed": 1.5,
+            "max_number": 10,
+            "min_number": 0,
+            "operation": "Subtract",
+            "num_ships": 10
+          },
+          {
+            "speed": 2.5,
+            "max_number": 10,
+            "min_number": 0,
+            "operation": "Add",
+            "num_ships": 3
+          }
+        ]
+      }
+    ],
+    "background_file": "/spacebg2.jpg",
+    "title": "Multiplication Menace"
+  },
+  {
+    "waves": [
+      {
+        "groups": [
+          {
+            "speed": 1.5,
+            "max_number": 5,
+            "min_number": 0,
+            "operation": "Subtract",
+            "num_ships": 10
+          },
+          {
+            "speed": 2.5,
+            "max_number": 5,
+            "min_number": 0,
+            "operation": "Add",
+            "num_ships": 3
+          }
+        ]
+      },
+      {
+        "groups": [
+          {
+            "speed": 2.5,
+            "max_number": 5,
+            "min_number": 0,
+            "operation": "Subtract",
+            "num_ships": 10
+          },
+          {
+            "speed": 3.5,
+            "max_number": 5,
+            "min_number": 0,
+            "operation": "Add",
+            "num_ships": 3
+          }
+        ]
+      },
+      {
+        "groups": [
+          {
+            "speed": 1.5,
+            "max_number": 10,
+            "min_number": 0,
+            "operation": "Subtract",
+            "num_ships": 10
+          },
+          {
+            "speed": 2.5,
+            "max_number": 10,
+            "min_number": 0,
+            "operation": "Add",
+            "num_ships": 3
+          }
+        ]
+      }
+    ],
+    "background_file": "/spacebg2.jpg",
+    "title": "Deadly Division"
   }
 ]

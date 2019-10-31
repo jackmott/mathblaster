@@ -196,12 +196,12 @@ impl MainState {
             messages: messages,
             aliens: aliens,
             text: TextState {
-                dead_text: MBText::new("You Have Died".to_string(), &assets.title_font,blue(), 75.0,ctx),
-                won_text: MBText::new("You Have Won".to_string(), &assets.main_font,blue(), 75.0,ctx),
-                press_enter: MBText::new("Press Enter".to_string(), &assets.main_font,white(), 42.0,ctx),
-                math_blaster: MBText::new("Math Blaster".to_string(), &assets.title_font,blue(), 128.0,ctx),
-                level_complete: MBText::new("Level Complete!".to_string(), &assets.title_font,white(), 75.0,ctx),
-                level_names: levels.iter().map(|level| MBText::new_blink(level.title.clone(),&assets.main_font,white(),gray(),64.0,ctx)).collect(),
+                dead_text: MBText::new("You Have Died".to_string(), &assets.title_font,BLUE, 75.0,ctx),
+                won_text: MBText::new("You Have Won".to_string(), &assets.main_font,BLUE, 75.0,ctx),
+                press_enter: MBText::new("Press Enter".to_string(), &assets.main_font,WHITE, 42.0,ctx),
+                math_blaster: MBText::new("Math Blaster".to_string(), &assets.title_font,BLUE, 128.0,ctx),
+                level_complete: MBText::new("Level Complete!".to_string(), &assets.title_font,WHITE, 75.0,ctx),
+                level_names: levels.iter().map(|level| MBText::new_blink(level.title.clone(),&assets.main_font,WHITE,GRAY,64.0,ctx)).collect(),
             },
             turret: Turret::new(&assets),
             levels: levels,
@@ -383,11 +383,15 @@ impl MainState {
         
         let window_dimension = graphics::size(ctx);
         let mut y = 0.4 * window_dimension.1 as f32;                
-        for level_name in &self.text.level_names {
+        for (i,level_name) in self.text.level_names.iter().enumerate() {
             let vertical_size = level_name.dest_pixel_dimensions(window_dimension).1;
             let mut center = level_name.center(ctx);
             center[1] = y;
-            level_name.draw(center,ctx);
+            if i == self.level_selection {
+                level_name.draw(center,ctx);
+            } else {
+                level_name.draw_color(center,GRAY,ctx);
+            }
             y += vertical_size * 1.075;
         }
     }
