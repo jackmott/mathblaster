@@ -162,6 +162,7 @@ struct TextState {
     press_enter: MBText,
     math_blaster: MBText,
     level_complete: MBText,
+    level_names: Vec<MBText>,
 }
 struct MainState {
     messages: VecDeque<Message>,
@@ -199,6 +200,7 @@ impl MainState {
                 press_enter: MBText::new("Press Enter".to_string(), &assets.main_font,white(), 42.0,ctx),
                 math_blaster: MBText::new("Math Blaster".to_string(), &assets.title_font,blue(), 128.0,ctx),
                 level_complete: MBText::new("Level Complete!".to_string(), &assets.title_font,white(), 128.0,ctx),
+                level_names: levels.iter().map(|level| MBText::new(level.title.clone(),&assets.main_font,white(),64.0,ctx)).collect(),
             },
             turret: Turret::new(&assets),
             levels: levels,
@@ -380,9 +382,19 @@ impl MainState {
             graphics::DrawParam::new().scale(self.background.scale(graphics::size(ctx)));
         let _ = graphics::draw(ctx, &self.assets.background, background_param);                
         let mut title_pos = self.text.math_blaster.center(ctx);
-        title_pos[1] *= 0.5;        
-        self.text.press_enter.draw_center(ctx);        
+        title_pos[1] *= 0.5;                
         self.text.math_blaster.draw(title_pos,ctx);        
+        
+        let window_dimension = graphics::size(ctx);
+        let mut y = 0.4 * window_dimension.1 as f32;                
+        for level_name in &self.text.level_names {
+            let vertical_size = level_name.dest_pixel_dimensions(window_dimension).1;
+            let mut center = level_name.center(ctx);
+            center[1] = y;
+            level_name.draw(center,ctx);
+            y += vertical_size * 1.075;
+        }
+
         graphics::present(ctx)?;
         Ok(())
     }

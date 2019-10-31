@@ -20,7 +20,7 @@ pub trait Scalable {
     fn dest_pixel_dimensions(&self, screen_dimensions: (f32, f32)) -> (f32, f32) {
         let (w, h) = self.pct_dimensions();
         (w * screen_dimensions.0, h * screen_dimensions.1)
-    }
+    }    
     fn scale(&self, window_dimensions: (f32, f32)) -> na::Vector2<f32> {
         let (sw, sh) = self.dest_pixel_dimensions(window_dimensions);
         let (tw, th) = self.src_pixel_dimensions();
