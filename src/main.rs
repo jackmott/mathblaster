@@ -179,6 +179,7 @@ struct MainState {
     text: TextState,
     lives: usize,
     crosshair: Crosshair,
+    level_selection: usize,
 }
 
 impl MainState {
@@ -195,12 +196,12 @@ impl MainState {
             messages: messages,
             aliens: aliens,
             text: TextState {
-                dead_text: MBText::new("You Have Died".to_string(), &assets.title_font,blue(), 128.0,ctx),
-                won_text: MBText::new("You Have Won".to_string(), &assets.main_font,blue(), 128.0,ctx),
+                dead_text: MBText::new("You Have Died".to_string(), &assets.title_font,blue(), 75.0,ctx),
+                won_text: MBText::new("You Have Won".to_string(), &assets.main_font,blue(), 75.0,ctx),
                 press_enter: MBText::new("Press Enter".to_string(), &assets.main_font,white(), 42.0,ctx),
                 math_blaster: MBText::new("Math Blaster".to_string(), &assets.title_font,blue(), 128.0,ctx),
-                level_complete: MBText::new("Level Complete!".to_string(), &assets.title_font,white(), 128.0,ctx),
-                level_names: levels.iter().map(|level| MBText::new(level.title.clone(),&assets.main_font,white(),64.0,ctx)).collect(),
+                level_complete: MBText::new("Level Complete!".to_string(), &assets.title_font,white(), 75.0,ctx),
+                level_names: levels.iter().map(|level| MBText::new_blink(level.title.clone(),&assets.main_font,white(),gray(),64.0,ctx)).collect(),
             },
             turret: Turret::new(&assets),
             levels: levels,
@@ -220,6 +221,7 @@ impl MainState {
                 src_pixel_height: assets.crosshair.height() as f32,
             },
             assets: assets,
+            level_selection: 0,
         })
     }
 
@@ -256,38 +258,36 @@ impl MainState {
             ));
         }
     }
-    fn update_start_menu(&mut self, ctx: &mut Context) -> GameResult {
+    fn update_start_menu(&mut self, ctx: &mut Context)  {                
         if keyboard::is_key_pressed(ctx, KeyCode::Return) {
             self.set_level_wave(0, 0, ctx);
             self.lives = 2;
             self.turret = Turret::new(&self.assets);
             self.state = GameState::Playing;
         }
-        Ok(())
+        for level_name in &mut self.text.level_names {
+            level_name.update(self.dt)
+        }        
     }
-    fn update_won(&mut self, ctx: &mut Context) -> GameResult {
+    fn update_won(&mut self, ctx: &mut Context)  {
         if keyboard::is_key_pressed(ctx, KeyCode::Return) {
             self.state = GameState::StartMenu;
-        }
-        Ok(())
+        }        
     }
-    fn update_level_complete(&mut self, ctx: &mut Context) -> GameResult {
+    fn update_level_complete(&mut self, ctx: &mut Context)  {
         if keyboard::is_key_pressed(ctx, KeyCode::Return) {
             self.state = GameState::Playing;
             self.levels[self.current_level].push_title(&mut self.messages, &self.assets,ctx);
             self.messages
                 .push_back(Message::new("Wave 1".to_string(), 2000.0, &self.assets,ctx));
-        }
-        Ok(())
+        }        
     }
-    fn update_dead(&mut self, ctx: &mut Context) -> GameResult {
+    fn update_dead(&mut self, ctx: &mut Context) {
         if keyboard::is_key_pressed(ctx, KeyCode::Return) {
             self.state = GameState::StartMenu;
-        }
-        Ok(())
+        }        
     }
-    fn update_dying(&mut self, ctx: &mut Context) -> GameResult {
-        self.dt = timer::delta(ctx);
+    fn update_dying(&mut self, ctx: &mut Context) {        
         for alien in &mut self.aliens {
             alien.update(&mut self.turret, ctx, self.dt);
         }
@@ -310,13 +310,10 @@ impl MainState {
             } else {
                 self.state = GameState::Dead;
             }
-        }
-        Ok(())
+        }     
     }
 
-    fn update_playing(&mut self, ctx: &mut Context) -> GameResult {
-        self.dt = timer::delta(ctx);
-
+    fn update_playing(&mut self, ctx: &mut Context)  {        
         self.crosshair.update(self.dt);
 
         //update aliens and turret, and message queue
@@ -375,9 +372,8 @@ impl MainState {
             self.increment_level_wave(ctx);
         }
 
-        Ok(())
     }
-    fn draw_start_menu(&mut self, ctx: &mut Context) -> GameResult {
+    fn draw_start_menu(&mut self, ctx: &mut Context)  {
         let background_param =
             graphics::DrawParam::new().scale(self.background.scale(graphics::size(ctx)));
         let _ = graphics::draw(ctx, &self.assets.background, background_param);                
@@ -394,46 +390,37 @@ impl MainState {
             level_name.draw(center,ctx);
             y += vertical_size * 1.075;
         }
-
-        graphics::present(ctx)?;
-        Ok(())
     }
-    fn draw_won(&mut self, ctx: &mut Context) -> GameResult {
+    fn draw_won(&mut self, ctx: &mut Context)  {
         let background_param =
             graphics::DrawParam::new().scale(self.background.scale(graphics::size(ctx)));
         let _ = graphics::draw(ctx, &self.assets.background, background_param);        
         let mut title_pos = self.text.won_text.center(ctx);
         title_pos[1] *= 0.5;
         self.text.press_enter.draw_center(ctx);
-        self.text.won_text.draw(title_pos,ctx);        
-        graphics::present(ctx)?;
-        Ok(())
+        self.text.won_text.draw(title_pos,ctx);                
     }
 
-    fn draw_level_complete(&mut self, ctx: &mut Context) -> GameResult {
+    fn draw_level_complete(&mut self, ctx: &mut Context) {
         let background_param =
             graphics::DrawParam::new().scale(self.background.scale(graphics::size(ctx)));
         let _ = graphics::draw(ctx, &self.assets.background, background_param);        
         let mut title_pos = self.text.level_complete.center(ctx);
         title_pos[1] *= 0.5;
         self.text.press_enter.draw_center(ctx);
-        self.text.level_complete.draw(title_pos,ctx);        
-        graphics::present(ctx)?;
-        Ok(())
+        self.text.level_complete.draw(title_pos,ctx);                
     }
 
-    fn draw_dead(&mut self, ctx: &mut Context) -> GameResult {
+    fn draw_dead(&mut self, ctx: &mut Context) {
         let background_param =
             graphics::DrawParam::new().scale(self.background.scale(graphics::size(ctx)));
         let _ = graphics::draw(ctx, &self.assets.background, background_param);        
         let mut title_pos = self.text.dead_text.center(ctx);
         title_pos[1] *= 0.5;
         self.text.press_enter.draw_center(ctx);
-        self.text.dead_text.draw(title_pos,ctx);        
-        graphics::present(ctx)?;
-        Ok(())
+        self.text.dead_text.draw(title_pos,ctx);                
     }
-    fn draw_playing(&mut self, ctx: &mut Context) -> GameResult {
+    fn draw_playing(&mut self, ctx: &mut Context) {
         //Draw the background
         let background_param =
             graphics::DrawParam::new().scale(self.background.scale(graphics::size(ctx)));
@@ -477,12 +464,9 @@ impl MainState {
         self.turret.draw_lives(self.lives, ctx, &mut self.assets);
         if !self.messages.is_empty() {
             self.messages[0].draw(ctx);
-        }
-
-        graphics::present(ctx)?;
-        Ok(())
+        }       
     }
-    fn draw_dying(&mut self, ctx: &mut Context) -> GameResult {
+    fn draw_dying(&mut self, ctx: &mut Context)  {
         let background_param =
             graphics::DrawParam::new().scale(self.background.scale(graphics::size(ctx)));
         let _ = graphics::draw(ctx, &self.assets.background, background_param);
@@ -496,14 +480,12 @@ impl MainState {
             pos[0] += ((10 + i % 2) as f32 / 100.0) * graphics::size(ctx).0;
 
             self.turret.explosions[i].draw(ctx, &mut self.assets)
-        }
-        //todo move this into the main draw funcrtion since we always just do this at the end?
-        graphics::present(ctx)?;
-        Ok(())
+        }        
     }
 }
 impl event::EventHandler for MainState {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
+        self.dt = timer::delta(ctx);
         match &self.state {
             GameState::StartMenu => self.update_start_menu(ctx),
             GameState::Playing => self.update_playing(ctx),
@@ -512,6 +494,7 @@ impl event::EventHandler for MainState {
             GameState::Won => self.update_won(ctx),
             GameState::LevelComplete => self.update_level_complete(ctx),
         }
+        Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
@@ -523,6 +506,8 @@ impl event::EventHandler for MainState {
             GameState::Won => self.draw_won(ctx),
             GameState::LevelComplete => self.draw_level_complete(ctx),
         }
+        graphics::present(ctx)?;
+        Ok(())
     }
     fn resize_event(&mut self, ctx: &mut Context, width: f32, height: f32) {
         println!("Resized screen to {}, {}", width, height);

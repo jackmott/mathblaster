@@ -1,4 +1,4 @@
-use ggez::graphics::{self};
+use ggez::graphics::{self,Color};
 use ggez::nalgebra as na;
 use ggez::Context;
 
@@ -10,8 +10,9 @@ pub fn white() -> graphics::Color {
 pub fn blue() -> graphics::Color {
     graphics::Color::from((0,0,255,255))
 }
- 
-
+pub fn gray() -> graphics::Color {
+    graphics::Color::from((128,128,128,255))
+}
 
 pub trait Scalable {
     fn pct_dimensions(&self) -> (f32, f32);
@@ -46,6 +47,10 @@ pub fn get_text_center(ctx: &mut Context, text: &graphics::Text) -> na::Point2<f
     )
 }*/
 
-pub fn lerp(a: f32, b: f32, pct: f32) -> f32 {
-    a * (1.0 - pct) + b * pct
+pub fn lerp_color(a:Color, b:Color, pct: f32) -> Color {
+    let red = a.r * (1.0 - pct) + b.r * pct;
+    let green = a.g * (1.0 - pct) + b.g * pct;
+    let blue = a.b * (1.0 - pct) + b.b * pct;
+    let alpha = a.a * (1.0 - pct) + b.a * pct;
+    Color::new(red,green,blue,alpha)
 }
