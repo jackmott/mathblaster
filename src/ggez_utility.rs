@@ -4,6 +4,15 @@ use ggez::Context;
 
 use crate::assets::*;
 
+pub fn white() -> graphics::Color {
+    graphics::Color::from((255,255,255,255))
+}
+pub fn blue() -> graphics::Color {
+    graphics::Color::from((0,0,255,255))
+}
+ 
+
+
 pub trait Scalable {
     fn pct_dimensions(&self) -> (f32, f32);
     fn src_pixel_dimensions(&self) -> (f32, f32);
@@ -12,10 +21,7 @@ pub trait Scalable {
         let (w, h) = self.pct_dimensions();
         (w * screen_dimensions.0, h * screen_dimensions.1)
     }
-    fn scale(
-        &self,
-        window_dimensions: (f32, f32),
-    ) -> na::Vector2<f32> {
+    fn scale(&self, window_dimensions: (f32, f32)) -> na::Vector2<f32> {
         let (sw, sh) = self.dest_pixel_dimensions(window_dimensions);
         let (tw, th) = self.src_pixel_dimensions();
         // only use screen width for scaling
@@ -30,7 +36,7 @@ pub trait Scalable {
 pub fn to_screen_pos(pos: (f32, f32), screen_dimensions: (f32, f32)) -> na::Point2<f32> {
     na::Point2::new(pos.0 * screen_dimensions.0, pos.1 * screen_dimensions.1)
 }
-
+/*
 pub fn get_text_center(ctx: &mut Context, text: &graphics::Text) -> na::Point2<f32> {
     let window_dim = graphics::size(ctx);
     let text_dim = text.dimensions(ctx);
@@ -38,8 +44,8 @@ pub fn get_text_center(ctx: &mut Context, text: &graphics::Text) -> na::Point2<f
         window_dim.0 / 2.0 - text_dim.0 as f32 / 2.0,
         window_dim.1 / 2.0 - text_dim.1 as f32 / 2.0,
     )
-}
+}*/
 
-pub fn lerp(a:f32,b:f32,pct:f32) -> f32 {
-    a * (1.0-pct) + b*pct
+pub fn lerp(a: f32, b: f32, pct: f32) -> f32 {
+    a * (1.0 - pct) + b * pct
 }

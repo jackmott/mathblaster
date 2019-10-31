@@ -20,7 +20,9 @@ mod ggez_utility;
 mod level;
 mod message;
 mod turret;
+mod mbtext;
 
+use crate::mbtext::*;
 use crate::alien::*;
 use crate::assets::*;
 use crate::crosshair::*;
@@ -38,23 +40,20 @@ fn get_first_living_alien(aliens: &Vec<Alien>) -> Option<usize> {
 
 fn get_lowest_living_alien(aliens: &Vec<Alien>) -> Option<usize> {
     match aliens
-            .iter()            
-            .enumerate()  
-            .filter(|(_,alien)| alien.state != AlienState::Dead)
-            .max_by_key(|(_,alien)| {
-                    (alien.pos[1] * 1000.0) as i32
-            })
-            {
-                Some( (index,_) ) => Some(index) ,
-                None => None
-            }
+        .iter()
+        .enumerate()
+        .filter(|(_, alien)| alien.state != AlienState::Dead)
+        .max_by_key(|(_, alien)| (alien.pos[1] * 1000.0) as i32)
+    {
+        Some((index, _)) => Some(index),
+        None => None,
+    }
 }
 
-fn gen_aliens(wave: &Wave, assets:&Assets) -> Vec<Alien> {
+fn gen_aliens(wave: &Wave, assets: &Assets) -> Vec<Alien> {
     let mut aliens: Vec<Alien> = Vec::new();
     let mut rng = rand::thread_rng();
     for group in &wave.groups {
-        
         let alien_img = match group.operation {
             Operation::Add => &assets.add_ship,
             Operation::Subtract => &assets.sub_ship,
@@ -65,21 +64,30 @@ fn gen_aliens(wave: &Wave, assets:&Assets) -> Vec<Alien> {
         let alien_img_height = alien_img.height() as f32;
 
         for i in 0..group.num_ships {
-            
-            let (num1,num2) = 
-                if group.operation == Operation::Divide {
-                   let mut a;
-                   let mut b;
-                   loop {
-                       a = rng.gen_range(group.min_number,group.max_number);
-                       b = if a == group.min_number { a } else {rng.gen_range(group.min_number,a)};
-                       if b == 0 { continue; }
-                       if a % b == 0 { break;  }
-                    }               
-                   (a,b)
-                } else {
-                    (rng.gen_range(group.min_number,group.max_number),rng.gen_range(group.min_number,group.max_number))
-                };
+            let (num1, num2) = if group.operation == Operation::Divide {
+                let mut a;
+                let mut b;
+                loop {
+                    a = rng.gen_range(group.min_number, group.max_number);
+                    b = if a == group.min_number {
+                        a
+                    } else {
+                        rng.gen_range(group.min_number, a)
+                    };
+                    if b == 0 {
+                        continue;
+                    }
+                    if a % b == 0 {
+                        break;
+                    }
+                }
+                (a, b)
+            } else {
+                (
+                    rng.gen_range(group.min_number, group.max_number),
+                    rng.gen_range(group.min_number, group.max_number),
+                )
+            };
 
             let (answer, op) = match group.operation {
                 Operation::Add => (num1 + num2, "+"),
@@ -96,7 +104,7 @@ fn gen_aliens(wave: &Wave, assets:&Assets) -> Vec<Alien> {
                 .any(|alien| (alien.pos[0] - x).abs() < 0.1)
             {
                 x = rng.gen_range(0.05, 0.95);
-            }            
+            }
             let alien = Alien {
                 operation: group.operation,
                 speed: group.speed,
@@ -104,7 +112,7 @@ fn gen_aliens(wave: &Wave, assets:&Assets) -> Vec<Alien> {
                 text: graphics::Text::new((text, assets.main_font, 24.0)),
                 answer: answer,
                 explosion: Explosion::new(0.0, na::Point2::new(0.0, 0.0)),
-                state: AlienState::Alive,                                
+                state: AlienState::Alive,
                 src_pixel_width: alien_img_width,
                 src_pixel_height: alien_img_height,
             };
@@ -116,9 +124,10 @@ fn gen_aliens(wave: &Wave, assets:&Assets) -> Vec<Alien> {
 }
 
 struct Background {
-    src_pixel_width:f32,
-    src_pixel_height:f32
+    src_pixel_width: f32,
+    src_pixel_height: f32,
 }
+
 impl Scalable for Background {
     fn pct_pos(&self) -> na::Point2<f32> {
         na::Point2::new(0.0, 0.0)
@@ -127,14 +136,9 @@ impl Scalable for Background {
         (1.0, 1.0)
     }
     fn src_pixel_dimensions(&self) -> (f32, f32) {
-        (
-            self.src_pixel_width,self.src_pixel_height
-        )
+        (self.src_pixel_width, self.src_pixel_height)
     }
-    fn scale(
-        &self,
-        screen_dimensions: (f32, f32),
-    ) -> na::Vector2<f32> {
+    fn scale(&self, screen_dimensions: (f32, f32)) -> na::Vector2<f32> {
         let (sw, sh) = self.dest_pixel_dimensions(screen_dimensions);
         let (tw, th) = self.src_pixel_dimensions();
         // only use screen width for scaling
@@ -153,11 +157,11 @@ enum GameState {
 }
 
 struct TextState {
-    dead_text: graphics::Text,
-    won_text: graphics::Text,
-    press_enter: graphics::Text,
-    math_blaster: graphics::Text,
-    level_complete: graphics::Text,
+    dead_text: MBText,
+    won_text: MBText,
+    press_enter: MBText,
+    math_blaster: MBText,
+    level_complete: MBText,
 }
 struct MainState {
     messages: VecDeque<Message>,
@@ -173,7 +177,7 @@ struct MainState {
     state: GameState,
     text: TextState,
     lives: usize,
-    crosshair:Crosshair,
+    crosshair: Crosshair,
 }
 
 impl MainState {
@@ -181,8 +185,8 @@ impl MainState {
         let levels = Level::load_from_file();
         let assets = Assets::new(ctx);
         let mut messages = VecDeque::new();
-        messages.push_back(Message::new(levels[0].title.clone(), 2000.0, &assets));
-        messages.push_back(Message::new("Wave 1".to_string(), 2000.0, &assets));
+        messages.push_back(Message::new(levels[0].title.clone(), 2000.0, &assets,ctx));
+        messages.push_back(Message::new("Wave 1".to_string(),2000.0, &assets,ctx));
         let aliens = gen_aliens(&levels[0].waves[0], &assets);
         let target = get_lowest_living_alien(&aliens);
 
@@ -190,11 +194,11 @@ impl MainState {
             messages: messages,
             aliens: aliens,
             text: TextState {
-                dead_text: graphics::Text::new(("You Have Died", assets.title_font, 128.0)),
-                won_text: graphics::Text::new(("You Have Won", assets.main_font, 128.0)),
-                press_enter: graphics::Text::new(("Press Enter", assets.main_font, 42.0)),
-                math_blaster: graphics::Text::new(("Math Blaster", assets.title_font, 128.0)),
-                level_complete: graphics::Text::new(("Level Complete!", assets.title_font, 128.0)),
+                dead_text: MBText::new("You Have Died".to_string(), &assets.title_font,blue(), 128.0,ctx),
+                won_text: MBText::new("You Have Won".to_string(), &assets.main_font,blue(), 128.0,ctx),
+                press_enter: MBText::new("Press Enter".to_string(), &assets.main_font,white(), 42.0,ctx),
+                math_blaster: MBText::new("Math Blaster".to_string(), &assets.title_font,blue(), 128.0,ctx),
+                level_complete: MBText::new("Level Complete!".to_string(), &assets.title_font,white(), 128.0,ctx),
             },
             turret: Turret::new(&assets),
             levels: levels,
@@ -203,15 +207,15 @@ impl MainState {
             target: target,
             background: Background {
                 src_pixel_width: assets.background.width() as f32,
-                src_pixel_height:assets.background.height() as f32,
+                src_pixel_height: assets.background.height() as f32,
             },
             state: GameState::StartMenu,
             dt: std::time::Duration::new(0, 0),
             lives: 2,
-            crosshair:Crosshair { 
+            crosshair: Crosshair {
                 elapsed: 0,
                 src_pixel_width: assets.crosshair.width() as f32,
-                src_pixel_height: assets.crosshair.height() as f32
+                src_pixel_height: assets.crosshair.height() as f32,
             },
             assets: assets,
         })
@@ -246,7 +250,7 @@ impl MainState {
             self.messages.push_back(Message::new(
                 "Wave ".to_string() + &self.current_wave.to_string(),
                 2000.0,
-                &self.assets,
+                &self.assets,ctx,
             ));
         }
     }
@@ -268,9 +272,9 @@ impl MainState {
     fn update_level_complete(&mut self, ctx: &mut Context) -> GameResult {
         if keyboard::is_key_pressed(ctx, KeyCode::Return) {
             self.state = GameState::Playing;
-            self.levels[self.current_level].push_title(&mut self.messages, &self.assets);
+            self.levels[self.current_level].push_title(&mut self.messages, &self.assets,ctx);
             self.messages
-                .push_back(Message::new("Wave 1".to_string(), 2000.0, &self.assets));
+                .push_back(Message::new("Wave 1".to_string(), 2000.0, &self.assets,ctx));
         }
         Ok(())
     }
@@ -283,7 +287,7 @@ impl MainState {
     fn update_dying(&mut self, ctx: &mut Context) -> GameResult {
         self.dt = timer::delta(ctx);
         for alien in &mut self.aliens {
-            alien.update(&mut self.turret,ctx, self.dt);
+            alien.update(&mut self.turret, ctx, self.dt);
         }
         self.turret.update(ctx, self.dt);
         for splosion in &mut self.turret.explosions {
@@ -300,7 +304,7 @@ impl MainState {
                 self.turret = Turret::new(&self.assets);
                 self.set_level_wave(self.current_level, 0, ctx);
                 self.state = GameState::Playing;
-                self.levels[self.current_level].push_title(&mut self.messages, &self.assets);
+                self.levels[self.current_level].push_title(&mut self.messages, &self.assets,ctx);
             } else {
                 self.state = GameState::Dead;
             }
@@ -372,117 +376,55 @@ impl MainState {
         Ok(())
     }
     fn draw_start_menu(&mut self, ctx: &mut Context) -> GameResult {
-        let background_param = graphics::DrawParam::new().scale(
-            self.background
-                .scale(graphics::size(ctx)),
-        );
-        let _ = graphics::draw(ctx, &self.assets.background, background_param);
-        let text_pos = get_text_center(ctx, &self.text.press_enter);
-        let mut title_pos = get_text_center(ctx, &self.text.math_blaster);
-        title_pos[1] *= 0.5;
-        let _ = graphics::draw(
-            ctx,
-            &self.text.press_enter,
-            graphics::DrawParam::new()
-                .color(graphics::Color::from((255, 255, 255, 255)))
-                .dest(text_pos),
-        );
-        let _ = graphics::draw(
-            ctx,
-            &self.text.math_blaster,
-            graphics::DrawParam::new()
-                .color(graphics::Color::from((0, 0, 255, 255)))
-                .dest(title_pos),
-        );
+        let background_param =
+            graphics::DrawParam::new().scale(self.background.scale(graphics::size(ctx)));
+        let _ = graphics::draw(ctx, &self.assets.background, background_param);                
+        let mut title_pos = self.text.math_blaster.center(ctx);
+        title_pos[1] *= 0.5;        
+        self.text.press_enter.draw_center(ctx);        
+        self.text.math_blaster.draw(title_pos,ctx);        
         graphics::present(ctx)?;
         Ok(())
     }
     fn draw_won(&mut self, ctx: &mut Context) -> GameResult {
-        let background_param = graphics::DrawParam::new().scale(
-            self.background
-                .scale(graphics::size(ctx)),
-        );
-        let _ = graphics::draw(ctx, &self.assets.background, background_param);
-        let text_pos = get_text_center(ctx, &self.text.press_enter);
-        let mut title_pos = get_text_center(ctx, &self.text.won_text);
+        let background_param =
+            graphics::DrawParam::new().scale(self.background.scale(graphics::size(ctx)));
+        let _ = graphics::draw(ctx, &self.assets.background, background_param);        
+        let mut title_pos = self.text.won_text.center(ctx);
         title_pos[1] *= 0.5;
-        let _ = graphics::draw(
-            ctx,
-            &self.text.press_enter,
-            graphics::DrawParam::new()
-                .color(graphics::Color::from((255, 255, 255, 255)))
-                .dest(text_pos),
-        );
-        let _ = graphics::draw(
-            ctx,
-            &self.text.won_text,
-            graphics::DrawParam::new()
-                .color(graphics::Color::from((0, 0, 255, 255)))
-                .dest(title_pos),
-        );
+        self.text.press_enter.draw_center(ctx);
+        self.text.won_text.draw(title_pos,ctx);        
         graphics::present(ctx)?;
         Ok(())
     }
 
     fn draw_level_complete(&mut self, ctx: &mut Context) -> GameResult {
-        let background_param = graphics::DrawParam::new().scale(
-            self.background
-                .scale(graphics::size(ctx)),
-        );
-        let _ = graphics::draw(ctx, &self.assets.background, background_param);
-        let text_pos = get_text_center(ctx, &self.text.press_enter);
-        let mut title_pos = get_text_center(ctx, &self.text.level_complete);
+        let background_param =
+            graphics::DrawParam::new().scale(self.background.scale(graphics::size(ctx)));
+        let _ = graphics::draw(ctx, &self.assets.background, background_param);        
+        let mut title_pos = self.text.level_complete.center(ctx);
         title_pos[1] *= 0.5;
-        let _ = graphics::draw(
-            ctx,
-            &self.text.press_enter,
-            graphics::DrawParam::new()
-                .color(graphics::Color::from((255, 255, 255, 255)))
-                .dest(text_pos),
-        );
-        let _ = graphics::draw(
-            ctx,
-            &self.text.level_complete,
-            graphics::DrawParam::new()
-                .color(graphics::Color::from((0, 0, 255, 255)))
-                .dest(title_pos),
-        );
+        self.text.press_enter.draw_center(ctx);
+        self.text.level_complete.draw(title_pos,ctx);        
         graphics::present(ctx)?;
         Ok(())
     }
 
     fn draw_dead(&mut self, ctx: &mut Context) -> GameResult {
-        let background_param = graphics::DrawParam::new().scale(
-            self.background
-                .scale(graphics::size(ctx)),
-        );
-        let _ = graphics::draw(ctx, &self.assets.background, background_param);
-        let text_pos = get_text_center(ctx, &self.text.press_enter);
-        let mut title_pos = get_text_center(ctx, &self.text.dead_text);
+        let background_param =
+            graphics::DrawParam::new().scale(self.background.scale(graphics::size(ctx)));
+        let _ = graphics::draw(ctx, &self.assets.background, background_param);        
+        let mut title_pos = self.text.dead_text.center(ctx);
         title_pos[1] *= 0.5;
-        let _ = graphics::draw(
-            ctx,
-            &self.text.press_enter,
-            graphics::DrawParam::new()
-                .color(graphics::Color::from((255, 255, 255, 255)))
-                .dest(text_pos),
-        );
-        let _ = graphics::draw(
-            ctx,
-            &self.text.dead_text,
-            graphics::DrawParam::new()
-                .color(graphics::Color::from((0, 0, 255, 255)))
-                .dest(title_pos),
-        );
+        self.text.press_enter.draw_center(ctx);
+        self.text.dead_text.draw(title_pos,ctx);        
         graphics::present(ctx)?;
         Ok(())
     }
     fn draw_playing(&mut self, ctx: &mut Context) -> GameResult {
         //Draw the background
-        let background_param = graphics::DrawParam::new().scale(
-            self.background
-                .scale(graphics::size(ctx)),
-        );
+        let background_param =
+            graphics::DrawParam::new().scale(self.background.scale(graphics::size(ctx)));
         let _ = graphics::draw(ctx, &self.assets.background, background_param);
 
         // if we have a target, draw the crosshair
@@ -493,7 +435,7 @@ impl MainState {
                 //draw the crosshair on the target
                 let crosshair_pos =
                     to_screen_pos((alien.pos[0], alien.pos[1]), graphics::size(ctx));
-                self.crosshair.draw(crosshair_pos,ctx,&self.assets); 
+                self.crosshair.draw(crosshair_pos, ctx, &self.assets);
                 //draw the laser if the turret is firing
                 match self.turret.state {
                     TurretState::Firing => {
@@ -529,10 +471,8 @@ impl MainState {
         Ok(())
     }
     fn draw_dying(&mut self, ctx: &mut Context) -> GameResult {
-        let background_param = graphics::DrawParam::new().scale(
-            self.background
-                .scale(graphics::size(ctx)),
-        );
+        let background_param =
+            graphics::DrawParam::new().scale(self.background.scale(graphics::size(ctx)));
         let _ = graphics::draw(ctx, &self.assets.background, background_param);
         for alien in &mut self.aliens {
             alien.draw(ctx, &mut self.assets);
@@ -610,25 +550,46 @@ impl event::EventHandler for MainState {
                 graphics::Text::new((self.turret.raw_text.clone(), self.assets.main_font, 24.0));
         } else if keycode == KeyCode::Left {
             match self.target {
-                Some(index) => 
-                    if self.aliens.iter().any(|alien| alien.state == AlienState::Alive && alien.pos[1] >= 0.0) {
-                        let mut i = 
-                            if index == 0 { self.aliens.len()-1 } else { index-1 };
-                        while self.aliens[i].state != AlienState::Alive || self.aliens[i].pos[1] < 0.0{ i= if i == 0 { self.aliens.len()-1 } else { i-1 }};
+                Some(index) => {
+                    if self
+                        .aliens
+                        .iter()
+                        .any(|alien| alien.state == AlienState::Alive && alien.pos[1] >= 0.0)
+                    {
+                        let mut i = if index == 0 {
+                            self.aliens.len() - 1
+                        } else {
+                            index - 1
+                        };
+                        while self.aliens[i].state != AlienState::Alive
+                            || self.aliens[i].pos[1] < 0.0
+                        {
+                            i = if i == 0 { self.aliens.len() - 1 } else { i - 1 }
+                        }
                         self.target = Some(i);
-                    }, 
+                    }
+                }
                 _ => (),
             }
         } else if keycode == KeyCode::Right {
             println!("left");
             match self.target {
-                Some(index) => 
-                    if self.aliens.iter().any(|alien| alien.state == AlienState::Alive && alien.pos[1] > 0.0) {
-                        let mut i = (index+1) % self.aliens.len();
-                        while self.aliens[i].state != AlienState::Alive || self.aliens[i].pos[1] < 0.0 { i= (i +1) % self.aliens.len() ; }
+                Some(index) => {
+                    if self
+                        .aliens
+                        .iter()
+                        .any(|alien| alien.state == AlienState::Alive && alien.pos[1] > 0.0)
+                    {
+                        let mut i = (index + 1) % self.aliens.len();
+                        while self.aliens[i].state != AlienState::Alive
+                            || self.aliens[i].pos[1] < 0.0
+                        {
+                            i = (i + 1) % self.aliens.len();
+                        }
                         self.target = Some(i);
-                    },
-                
+                    }
+                }
+
                 _ => (),
             }
         }

@@ -20,17 +20,17 @@ pub struct Turret {
     pub explosions: Vec<Explosion>,
     pub state: TurretState,
     pub src_pixel_width: f32,
-    pub src_pixel_height: f32
+    pub src_pixel_height: f32,
 }
 impl Scalable for Turret {
     fn pct_pos(&self) -> na::Point2<f32> {
         na::Point2::new(0.5, 0.9)
     }
     fn pct_dimensions(&self) -> (f32, f32) {
-        (0.05, 0.05)
+        (0.035, 0.05)
     }
     fn src_pixel_dimensions(&self) -> (f32, f32) {
-        (self.src_pixel_width,self.src_pixel_height)
+        (self.src_pixel_width, self.src_pixel_height)
     }
 }
 impl Turret {
@@ -55,8 +55,7 @@ impl Turret {
         }
     }
 
-    pub fn update(&mut self, _ctx: &mut Context, _dt: std::time::Duration) {
-    } 
+    pub fn update(&mut self, _ctx: &mut Context, _dt: std::time::Duration) {}
 
     pub fn draw(&self, ctx: &mut Context, assets: &mut Assets) {
         let param = DrawParam::new()

@@ -23,21 +23,21 @@ pub struct Alien {
     pub explosion: Explosion,
     pub state: AlienState,
     pub src_pixel_width: f32,
-    pub src_pixel_height: f32
+    pub src_pixel_height: f32,
 }
 impl Scalable for Alien {
     fn pct_pos(&self) -> na::Point2<f32> {
         self.pos
     }
     fn pct_dimensions(&self) -> (f32, f32) {
-        (0.06, 0.07)
+        (0.045, 0.07)
     }
     fn src_pixel_dimensions(&self) -> (f32, f32) {
-        (self.src_pixel_width,self.src_pixel_height)
+        (self.src_pixel_width, self.src_pixel_height)
     }
 }
 impl Alien {
-    pub fn update(&mut self,turret:&mut Turret,ctx: &mut Context, dt: std::time::Duration) {
+    pub fn update(&mut self, turret: &mut Turret, ctx: &mut Context, dt: std::time::Duration) {
         if self.state != AlienState::Dead {
             let sec = dt.as_millis() as f32 / 100000.0;
             if self.pos[1] < 0.07 {
