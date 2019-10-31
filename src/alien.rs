@@ -22,23 +22,18 @@ pub struct Alien {
     pub answer: i32,
     pub explosion: Explosion,
     pub state: AlienState,
+    pub src_pixel_width: f32,
+    pub src_pixel_height: f32
 }
 impl Scalable for Alien {
-    fn get_pos(&self) -> na::Point2<f32> {
+    fn pct_pos(&self) -> na::Point2<f32> {
         self.pos
     }
-    fn get_dimensions(&self) -> (f32, f32) {
+    fn pct_dimensions(&self) -> (f32, f32) {
         (0.06, 0.07)
     }
-    fn get_texture_dimensions(&self, assets: &Assets) -> (f32, f32) {
-        let img = match self.operation {
-            Operation::Add => &assets.add_ship,
-            Operation::Subtract => &assets.sub_ship,
-            Operation::Multiply => &assets.mul_ship,
-            Operation::Divide => &assets.div_ship,
-        };
-
-        (img.width() as f32, img.height() as f32)
+    fn src_pixel_dimensions(&self) -> (f32, f32) {
+        (self.src_pixel_width,self.src_pixel_height)
     }
 }
 impl Alien {
@@ -65,10 +60,9 @@ impl Alien {
             if self.explosion.elapsed < self.explosion.duration / 2.0 {
                 let params = DrawParam::new()
                     .color(Color::from((255, 255, 255, 255)))
-                    .dest(self.get_screen_pos(graphics::size(ctx)))
-                    .scale(self.get_texture_scale(graphics::size(ctx), assets))
-                    .offset(na::Point2::new(0.5, 0.5))
-                    .rotation(3.14159 / 2.0);
+                    .dest(self.pixel_pos(graphics::size(ctx)))
+                    .scale(self.scale(graphics::size(ctx)))
+                    .offset(na::Point2::new(0.5, 0.5));
                 let img = match self.operation {
                     Operation::Add => &assets.add_ship,
                     Operation::Subtract => &assets.sub_ship,
@@ -78,7 +72,7 @@ impl Alien {
                 let _ = graphics::draw(ctx, img, params);
 
                 let tw = self.text.width(ctx) as f32;
-                let (sw, sh) = self.get_screen_dimensions(graphics::size(ctx));
+                let (sw, sh) = self.dest_pixel_dimensions(graphics::size(ctx));
                 let offsetx = -sw / 2.0 + (sw - tw) / 2.0;
                 let offsety = -sh / 1.2;
 
@@ -86,13 +80,13 @@ impl Alien {
 
                 let text_param = DrawParam::new()
                     .color(Color::from((255, 255, 255, 255)))
-                    .dest(self.get_screen_pos(graphics::size(ctx)) + offset);
+                    .dest(self.pixel_pos(graphics::size(ctx)) + offset);
                 let _ = graphics::draw(ctx, &self.text, text_param);
             }
         }
 
         if self.state == AlienState::Exploding {
-            self.explosion.pos = self.get_pos();
+            self.explosion.pos = self.pct_pos();
             self.explosion.draw(ctx, assets);
         }
     }

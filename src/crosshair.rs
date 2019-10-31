@@ -6,6 +6,8 @@ use crate::ggez_utility::*;
 
 pub struct Crosshair {
     pub elapsed:u32,
+    pub src_pixel_width:f32,
+    pub src_pixel_height:f32
 }
 
 const CROSSHAIR_TIME : u32 = 1000;
@@ -24,21 +26,20 @@ impl Crosshair {
         let crosshair_params = graphics::DrawParam::new()
                     .color(Color::from((255, color as u8, color as u8, 255)))
                     .dest(pos)
-                    .scale(self.get_texture_scale(graphics::size(ctx), assets))
+                    .scale(self.scale(graphics::size(ctx)))
                     .offset(na::Point2::new(0.5, 0.5));
         let _ = graphics::draw(ctx, &assets.crosshair, crosshair_params);
        
     }
 }
 impl Scalable for Crosshair {
-    fn get_pos(&self) -> na::Point2<f32> {
+    fn pct_pos(&self) -> na::Point2<f32> {
         na::Point2::new(0.0, 0.0)
     }
-    fn get_dimensions(&self) -> (f32, f32) {
+    fn pct_dimensions(&self) -> (f32, f32) {
         (0.10, 0.1)
     }
-    fn get_texture_dimensions(&self, assets: &Assets) -> (f32, f32) {
-        let img = &assets.crosshair;
-        (img.width() as f32, img.height() as f32)
+    fn src_pixel_dimensions(&self) -> (f32, f32) {
+        (self.src_pixel_width,self.src_pixel_height)
     }
 }

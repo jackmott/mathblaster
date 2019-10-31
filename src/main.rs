@@ -1,4 +1,3 @@
-
 use ggez;
 use ggez::audio::SoundSource;
 use ggez::conf;
@@ -35,7 +34,6 @@ fn get_first_living_alien(aliens: &Vec<Alien>) -> Option<usize> {
     aliens
         .iter()
         .position(|alien| alien.state != AlienState::Dead)
-        
 }
 
 fn get_lowest_living_alien(aliens: &Vec<Alien>) -> Option<usize> {
@@ -52,10 +50,20 @@ fn get_lowest_living_alien(aliens: &Vec<Alien>) -> Option<usize> {
             }
 }
 
-fn gen_aliens(wave: &Wave, font: &graphics::Font) -> Vec<Alien> {
+fn gen_aliens(wave: &Wave, assets:&Assets) -> Vec<Alien> {
     let mut aliens: Vec<Alien> = Vec::new();
     let mut rng = rand::thread_rng();
     for group in &wave.groups {
+        
+        let alien_img = match group.operation {
+            Operation::Add => &assets.add_ship,
+            Operation::Subtract => &assets.sub_ship,
+            Operation::Multiply => &assets.mul_ship,
+            Operation::Divide => &assets.div_ship,
+        };
+        let alien_img_width = alien_img.width() as f32;
+        let alien_img_height = alien_img.height() as f32;
+
         for i in 0..group.num_ships {
             
             let (num1,num2) = 
@@ -88,15 +96,17 @@ fn gen_aliens(wave: &Wave, font: &graphics::Font) -> Vec<Alien> {
                 .any(|alien| (alien.pos[0] - x).abs() < 0.1)
             {
                 x = rng.gen_range(0.05, 0.95);
-            }
+            }            
             let alien = Alien {
                 operation: group.operation,
                 speed: group.speed,
                 pos: na::Point2::new(x, -(i as i32) as f32 * 0.1),
-                text: graphics::Text::new((text, *font, 24.0)),
+                text: graphics::Text::new((text, assets.main_font, 24.0)),
                 answer: answer,
                 explosion: Explosion::new(0.0, na::Point2::new(0.0, 0.0)),
-                state: AlienState::Alive,
+                state: AlienState::Alive,                                
+                src_pixel_width: alien_img_width,
+                src_pixel_height: alien_img_height,
             };
             aliens.push(alien);
         }
@@ -105,27 +115,28 @@ fn gen_aliens(wave: &Wave, font: &graphics::Font) -> Vec<Alien> {
     aliens
 }
 
-struct Background {}
+struct Background {
+    src_pixel_width:f32,
+    src_pixel_height:f32
+}
 impl Scalable for Background {
-    fn get_pos(&self) -> na::Point2<f32> {
+    fn pct_pos(&self) -> na::Point2<f32> {
         na::Point2::new(0.0, 0.0)
     }
-    fn get_dimensions(&self) -> (f32, f32) {
+    fn pct_dimensions(&self) -> (f32, f32) {
         (1.0, 1.0)
     }
-    fn get_texture_dimensions(&self, assets: &Assets) -> (f32, f32) {
+    fn src_pixel_dimensions(&self) -> (f32, f32) {
         (
-            assets.background.width() as f32,
-            assets.background.height() as f32,
+            self.src_pixel_width,self.src_pixel_height
         )
     }
-    fn get_texture_scale(
+    fn scale(
         &self,
         screen_dimensions: (f32, f32),
-        assets: &Assets,
     ) -> na::Vector2<f32> {
-        let (sw, sh) = self.get_screen_dimensions(screen_dimensions);
-        let (tw, th) = self.get_texture_dimensions(assets);
+        let (sw, sh) = self.dest_pixel_dimensions(screen_dimensions);
+        let (tw, th) = self.src_pixel_dimensions();
         // only use screen width for scaling
         na::Vector2::new(sw / tw, sh / th)
     }
@@ -172,7 +183,7 @@ impl MainState {
         let mut messages = VecDeque::new();
         messages.push_back(Message::new(levels[0].title.clone(), 2000.0, &assets));
         messages.push_back(Message::new("Wave 1".to_string(), 2000.0, &assets));
-        let aliens = gen_aliens(&levels[0].waves[0], &assets.main_font);
+        let aliens = gen_aliens(&levels[0].waves[0], &assets);
         let target = get_lowest_living_alien(&aliens);
 
         Ok(MainState {
@@ -186,16 +197,23 @@ impl MainState {
                 level_complete: graphics::Text::new(("Level Complete!", assets.title_font, 128.0)),
             },
             turret: Turret::new(&assets),
-            assets: assets,
             levels: levels,
             current_level: 0,
             current_wave: 0,
             target: target,
-            background: Background {},
+            background: Background {
+                src_pixel_width: assets.background.width() as f32,
+                src_pixel_height:assets.background.height() as f32,
+            },
             state: GameState::StartMenu,
             dt: std::time::Duration::new(0, 0),
             lives: 2,
-            crosshair:Crosshair { elapsed: 0 },
+            crosshair:Crosshair { 
+                elapsed: 0,
+                src_pixel_width: assets.crosshair.width() as f32,
+                src_pixel_height: assets.crosshair.height() as f32
+            },
+            assets: assets,
         })
     }
 
@@ -212,7 +230,7 @@ impl MainState {
         self.current_wave = wave;
         self.target = None;
         let wave = &self.levels[self.current_level].waves[self.current_wave];
-        self.aliens = gen_aliens(wave, &self.assets.main_font);
+        self.aliens = gen_aliens(wave, &self.assets);
         self.target = get_lowest_living_alien(&self.aliens);
     }
     fn increment_level_wave(&mut self, ctx: &mut Context) {
@@ -310,10 +328,10 @@ impl MainState {
         // If there is a target, rotate the turret to it
         match self.target {
             Some(target) if self.aliens[target].state != AlienState::Dead => {
-                let turret_pos = self.turret.get_pos();
+                let turret_pos = self.turret.pct_pos();
                 let turret_vector: na::Vector2<f32> =
                     na::Vector2::new(turret_pos[0], turret_pos[1]);
-                let alien_pos = self.aliens[target].get_pos();
+                let alien_pos = self.aliens[target].pct_pos();
                 let alien_vector = na::Vector2::new(alien_pos[0], alien_pos[1]);
                 let v1 = na::Vector2::new(0.0, -1.0);
                 let v2 = alien_vector - turret_vector;
@@ -356,7 +374,7 @@ impl MainState {
     fn draw_start_menu(&mut self, ctx: &mut Context) -> GameResult {
         let background_param = graphics::DrawParam::new().scale(
             self.background
-                .get_texture_scale(graphics::size(ctx), &self.assets),
+                .scale(graphics::size(ctx)),
         );
         let _ = graphics::draw(ctx, &self.assets.background, background_param);
         let text_pos = get_text_center(ctx, &self.text.press_enter);
@@ -382,7 +400,7 @@ impl MainState {
     fn draw_won(&mut self, ctx: &mut Context) -> GameResult {
         let background_param = graphics::DrawParam::new().scale(
             self.background
-                .get_texture_scale(graphics::size(ctx), &self.assets),
+                .scale(graphics::size(ctx)),
         );
         let _ = graphics::draw(ctx, &self.assets.background, background_param);
         let text_pos = get_text_center(ctx, &self.text.press_enter);
@@ -409,7 +427,7 @@ impl MainState {
     fn draw_level_complete(&mut self, ctx: &mut Context) -> GameResult {
         let background_param = graphics::DrawParam::new().scale(
             self.background
-                .get_texture_scale(graphics::size(ctx), &self.assets),
+                .scale(graphics::size(ctx)),
         );
         let _ = graphics::draw(ctx, &self.assets.background, background_param);
         let text_pos = get_text_center(ctx, &self.text.press_enter);
@@ -436,7 +454,7 @@ impl MainState {
     fn draw_dead(&mut self, ctx: &mut Context) -> GameResult {
         let background_param = graphics::DrawParam::new().scale(
             self.background
-                .get_texture_scale(graphics::size(ctx), &self.assets),
+                .scale(graphics::size(ctx)),
         );
         let _ = graphics::draw(ctx, &self.assets.background, background_param);
         let text_pos = get_text_center(ctx, &self.text.press_enter);
@@ -463,7 +481,7 @@ impl MainState {
         //Draw the background
         let background_param = graphics::DrawParam::new().scale(
             self.background
-                .get_texture_scale(graphics::size(ctx), &self.assets),
+                .scale(graphics::size(ctx)),
         );
         let _ = graphics::draw(ctx, &self.assets.background, background_param);
 
@@ -482,8 +500,8 @@ impl MainState {
                         let laser = graphics::Mesh::new_line(
                             ctx,
                             &[
-                                self.turret.get_screen_pos(graphics::size(ctx)),
-                                alien.get_screen_pos(graphics::size(ctx)),
+                                self.turret.pixel_pos(graphics::size(ctx)),
+                                alien.pixel_pos(graphics::size(ctx)),
                             ],
                             4.0,
                             graphics::Color::from((255, 0, 0, 255)),
@@ -513,7 +531,7 @@ impl MainState {
     fn draw_dying(&mut self, ctx: &mut Context) -> GameResult {
         let background_param = graphics::DrawParam::new().scale(
             self.background
-                .get_texture_scale(graphics::size(ctx), &self.assets),
+                .scale(graphics::size(ctx)),
         );
         let _ = graphics::draw(ctx, &self.assets.background, background_param);
         for alien in &mut self.aliens {
@@ -522,7 +540,7 @@ impl MainState {
         self.turret.draw(ctx, &mut self.assets);
         self.turret.draw_lives(self.lives, ctx, &mut self.assets);
         for i in 0..self.turret.explosions.len() {
-            let mut pos = self.turret.get_screen_pos(graphics::size(ctx));
+            let mut pos = self.turret.pixel_pos(graphics::size(ctx));
             pos[0] += ((10 + i % 2) as f32 / 100.0) * graphics::size(ctx).0;
 
             self.turret.explosions[i].draw(ctx, &mut self.assets)

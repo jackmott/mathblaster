@@ -19,16 +19,18 @@ pub struct Turret {
     pub text: graphics::Text,
     pub explosions: Vec<Explosion>,
     pub state: TurretState,
+    pub src_pixel_width: f32,
+    pub src_pixel_height: f32
 }
 impl Scalable for Turret {
-    fn get_pos(&self) -> na::Point2<f32> {
+    fn pct_pos(&self) -> na::Point2<f32> {
         na::Point2::new(0.5, 0.9)
     }
-    fn get_dimensions(&self) -> (f32, f32) {
+    fn pct_dimensions(&self) -> (f32, f32) {
         (0.05, 0.05)
     }
-    fn get_texture_dimensions(&self, assets: &Assets) -> (f32, f32) {
-        (assets.turret.width() as f32, assets.turret.height() as f32)
+    fn src_pixel_dimensions(&self) -> (f32, f32) {
+        (self.src_pixel_width,self.src_pixel_height)
     }
 }
 impl Turret {
@@ -48,6 +50,8 @@ impl Turret {
             text: graphics::Text::new(("", assets.main_font, 24.0)),
             explosions: explosions,
             state: TurretState::Resting,
+            src_pixel_width: assets.turret.width() as f32,
+            src_pixel_height: assets.turret.height() as f32,
         }
     }
 
@@ -57,19 +61,19 @@ impl Turret {
     pub fn draw(&self, ctx: &mut Context, assets: &mut Assets) {
         let param = DrawParam::new()
             .color(Color::from((255, 255, 255, 255)))
-            .scale(self.get_texture_scale(graphics::size(ctx), assets))
+            .scale(self.scale(graphics::size(ctx)))
             .offset(na::Point2::new(0.5, 0.5))
             .rotation(self.rotation)
-            .dest(self.get_screen_pos(graphics::size(ctx)));
+            .dest(self.pixel_pos(graphics::size(ctx)));
         let _ = graphics::draw(ctx, &assets.turret, param);
         let text_param = DrawParam::new()
             .color(Color::from((255, 255, 255, 255)))
-            .dest(self.get_screen_pos(graphics::size(ctx)));
+            .dest(self.pixel_pos(graphics::size(ctx)));
         let _ = graphics::draw(ctx, &self.text, text_param);
     }
 
     pub fn draw_lives(&self, lives: usize, ctx: &mut Context, assets: &mut Assets) {
-        let scale = self.get_texture_scale(graphics::size(ctx), assets);
+        let scale = self.scale(graphics::size(ctx));
 
         for i in 0..lives {
             let param = DrawParam::new()
