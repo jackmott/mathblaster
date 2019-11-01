@@ -2,8 +2,8 @@ use ggez::graphics::{self};
 use ggez::Context;
 
 use crate::assets::*;
-use crate::mbtext::*;
 use crate::ggez_utility::*;
+use crate::mbtext::*;
 
 pub struct Message {
     pub text: MBText,
@@ -12,9 +12,9 @@ pub struct Message {
 }
 
 impl Message {
-    pub fn new(text: String, duration: f32, assets: &Assets,ctx: &mut Context) -> Message {
+    pub fn new(text: String, duration: f32, assets: &Assets, ctx: &mut Context) -> Message {
         Message {
-            text: MBText::new(text, &assets.title_font,WHITE, 64.0,ctx),
+            text: MBText::new(text, &assets.title_font, WHITE, 64.0, ctx),
             duration: duration,
             elapsed: 0.0,
         }
@@ -26,6 +26,6 @@ impl Message {
 
     pub fn draw(&self, ctx: &mut Context) {
         let text_pos = self.text.center(ctx);
-        self.text.draw(text_pos,ctx);        
+        self.text.draw(text_pos, ctx);
     }
 }

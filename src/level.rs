@@ -1,6 +1,6 @@
-use ggez::Context; 
 use crate::assets::*;
 use crate::message::*;
+use ggez::Context;
 
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
@@ -38,8 +38,8 @@ pub struct WaveGroup {
 }
 
 impl Level {
-    pub fn push_title(&self, messages: &mut VecDeque<Message>, assets: &Assets, ctx:&mut Context) {
-        messages.push_back(Message::new(self.title.clone(), 2000.0, assets,ctx));
+    pub fn push_title(&self, messages: &mut VecDeque<Message>, assets: &Assets, ctx: &mut Context) {
+        messages.push_back(Message::new(self.title.clone(), 2000.0, assets, ctx));
     }
 
     pub fn load_from_file() -> Vec<Level> {
