@@ -287,6 +287,9 @@ impl MainState {
     fn increment_level_wave(&mut self, ctx: &mut Context) {
         //if we were at the last wave already then go to next level
         if self.current_wave + 1 >= self.levels[self.current_level].waves.len() {
+            //unlock the next level and save the json
+            self.levels[self.current_level+1].unlocked = true;
+            Level::save_levels(&self.levels);
             if self.current_level + 1 >= self.levels.len() {
                 self.state = GameState::Won;
             } else {
@@ -322,14 +325,16 @@ impl MainState {
             self.state = GameState::Playing;
         }
 
+        let unlocked_count = self.levels.iter().filter(|level| level.unlocked).count();
+
         if let Some(keycode) = self.up_key {
             //we are dealing with a keycode so clear it
             self.up_key = None;
             if keycode == KeyCode::Down {
-                self.level_selection = (self.level_selection + 1) % self.levels.len();
+                self.level_selection = (self.level_selection + 1) % unlocked_count;
             } else if keycode == KeyCode::Up {
                 self.level_selection = if self.level_selection == 0 {
-                    self.levels.len() - 1
+                    unlocked_count-1
                 } else {
                     self.level_selection - 1
                 };
@@ -537,8 +542,10 @@ impl MainState {
             center[1] = y;
             if i == self.level_selection {
                 level_name.draw(center, ctx);
-            } else {
+            } else if self.levels[i].unlocked {
                 level_name.draw_color(center, GRAY, ctx);
+            } else {
+                level_name.draw_color(center, DARK_GRAY, ctx);
             }
             y += vertical_size * 1.075;
         }

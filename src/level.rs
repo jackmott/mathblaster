@@ -21,6 +21,7 @@ pub struct Level {
     pub waves: Vec<Wave>,
     pub background_file: String,
     pub title: String,
+    pub unlocked: bool
 }
 
 #[derive(Deserialize, Serialize)]
@@ -54,19 +55,24 @@ impl Level {
                 .map_err(|e| format!("file not valid\n{}", e))?;
             Ok(level)
         }
+       
         let result = load_helper();
         match result {
             Ok(levels) => levels,
             Err(msg) => {
                 // If we get an error, load the default and save a new levels.json file
                 println!("Error loading level file.\nUsing default\n{}", msg);
-                let level = Level::new();
-                let serialized = serde_json::to_string_pretty(&level).unwrap(); // TODO do we want to handle this gracefully too?
-                let mut file = File::create("resources/levels.json").unwrap();;
-                file.write_all(serialized.as_bytes()).unwrap();
-                level
+                let levels = Level::new();
+                Level::save_levels(&levels);
+                levels
             }
         }
+    }
+
+    pub fn save_levels(levels: &Vec<Level>) {
+        let serialized = serde_json::to_string_pretty(&levels).unwrap(); // TODO do we want to handle this gracefully too?
+        let mut file = File::create("resources/levels.json").unwrap();;
+        file.write_all(serialized.as_bytes()).unwrap();
     }
 
     // consider validating max_number to be sure it makes sense
@@ -74,6 +80,7 @@ impl Level {
         let level = vec![
             //Level 1
             Level {
+                unlocked: true,
                 title: "Addition Attack!".to_string(),
                 background_file: "/spacebg1.jpg".to_string(),
                 waves: vec![
@@ -108,6 +115,7 @@ impl Level {
             },
             //Level 2
             Level {
+                unlocked:false,
                 title: "Subtraction Subterfuge".to_string(),
                 background_file: "/spacebg2.jpg".to_string(),
                 waves: vec![
