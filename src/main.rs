@@ -22,7 +22,9 @@ mod level;
 mod mbtext;
 mod message;
 mod turret;
+mod background;
 
+use crate::background::*;
 use crate::alien::*;
 use crate::assets::*;
 use crate::crosshair::*;
@@ -124,28 +126,7 @@ fn gen_aliens(wave: &Wave, assets: &Assets) -> Vec<Alien> {
     aliens
 }
 
-struct Background {
-    src_pixel_width: f32,
-    src_pixel_height: f32,
-}
 
-impl Scalable for Background {
-    fn pct_pos(&self) -> na::Point2<f32> {
-        na::Point2::new(0.0, 0.0)
-    }
-    fn pct_dimensions(&self) -> (f32, f32) {
-        (1.0, 1.0)
-    }
-    fn src_pixel_dimensions(&self) -> (f32, f32) {
-        (self.src_pixel_width, self.src_pixel_height)
-    }
-    fn scale(&self, screen_dimensions: (f32, f32)) -> na::Vector2<f32> {
-        let (sw, sh) = self.dest_pixel_dimensions(screen_dimensions);
-        let (tw, th) = self.src_pixel_dimensions();
-        // only use screen width for scaling
-        na::Vector2::new(sw / tw, sh / th)
-    }
-}
 
 #[derive(Debug)]
 enum GameState {
@@ -188,7 +169,7 @@ impl MainState {
     fn new(ctx: &mut Context) -> GameResult<MainState> {
         let levels = Level::load_from_file();
         let assets = Assets::new(ctx);
-        let mut messages = VecDeque::new();
+        let messages = VecDeque::new();
         let aliens = gen_aliens(&levels[0].waves[0], &assets);
         let target = get_lowest_living_alien(&aliens);
 
@@ -253,6 +234,8 @@ impl MainState {
             background: Background {
                 src_pixel_width: assets.background.width() as f32,
                 src_pixel_height: assets.background.height() as f32,
+                stars1_pos: 0.0,
+                stars2_pos: 0.0,
             },
             state: GameState::StartMenu,
             dt: std::time::Duration::new(0, 0),
@@ -394,6 +377,7 @@ impl MainState {
     }
 
     fn update_playing(&mut self, ctx: &mut Context) {
+        self.background.update(self.dt);
         self.crosshair.update(self.dt);
         if let Some(keycode) = self.up_key {
             //we are going to deal with the up_key so clear it out
@@ -527,9 +511,7 @@ impl MainState {
         }
     }
     fn draw_start_menu(&mut self, ctx: &mut Context) {
-        let background_param =
-            graphics::DrawParam::new().scale(self.background.scale(graphics::size(ctx)));
-        let _ = graphics::draw(ctx, &self.assets.background, background_param);
+        self.background.draw(ctx, &self.assets);        
         let mut title_pos = self.text.math_blaster.center(ctx);
         title_pos[1] *= 0.5;
         self.text.math_blaster.draw(title_pos, ctx);
@@ -551,9 +533,7 @@ impl MainState {
         }
     }
     fn draw_won(&mut self, ctx: &mut Context) {
-        let background_param =
-            graphics::DrawParam::new().scale(self.background.scale(graphics::size(ctx)));
-        let _ = graphics::draw(ctx, &self.assets.background, background_param);
+        self.background.draw(ctx, &self.assets);      
         let mut title_pos = self.text.won_text.center(ctx);
         title_pos[1] *= 0.5;
         self.text.press_enter.draw_center(ctx);
@@ -561,9 +541,7 @@ impl MainState {
     }
 
     fn draw_level_complete(&mut self, ctx: &mut Context) {
-        let background_param =
-            graphics::DrawParam::new().scale(self.background.scale(graphics::size(ctx)));
-        let _ = graphics::draw(ctx, &self.assets.background, background_param);
+        self.background.draw(ctx, &self.assets);      
         let mut title_pos = self.text.level_complete.center(ctx);
         title_pos[1] *= 0.5;
         self.text.press_enter.draw_center(ctx);
@@ -571,9 +549,7 @@ impl MainState {
     }
 
     fn draw_dead(&mut self, ctx: &mut Context) {
-        let background_param =
-            graphics::DrawParam::new().scale(self.background.scale(graphics::size(ctx)));
-        let _ = graphics::draw(ctx, &self.assets.background, background_param);
+        self.background.draw(ctx, &self.assets);      
         let mut title_pos = self.text.dead_text.center(ctx);
         title_pos[1] *= 0.5;
         self.text.press_enter.draw_center(ctx);
@@ -581,9 +557,7 @@ impl MainState {
     }
     fn draw_playing(&mut self, ctx: &mut Context) {
         //Draw the background
-        let background_param =
-            graphics::DrawParam::new().scale(self.background.scale(graphics::size(ctx)));
-        let _ = graphics::draw(ctx, &self.assets.background, background_param);
+       self.background.draw(ctx, &self.assets);      
 
         // if we have a target, draw the crosshair
         match self.target {
@@ -626,9 +600,7 @@ impl MainState {
         }
     }
     fn draw_dying(&mut self, ctx: &mut Context) {
-        let background_param =
-            graphics::DrawParam::new().scale(self.background.scale(graphics::size(ctx)));
-        let _ = graphics::draw(ctx, &self.assets.background, background_param);
+        self.background.draw(ctx, &self.assets);      
         for alien in &mut self.aliens {
             alien.draw(ctx, &mut self.assets);
         }
@@ -657,6 +629,7 @@ impl event::EventHandler for MainState {
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
+        graphics::clear(ctx, [0.0, 0.0, 0.0, 1.0].into());
         match &self.state {
             GameState::StartMenu => self.draw_start_menu(ctx),
             GameState::Playing => self.draw_playing(ctx),

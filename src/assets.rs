@@ -12,6 +12,8 @@ pub struct Assets {
     pub main_font: graphics::Font,
     pub turret: graphics::Image,
     pub background: graphics::Image,
+    pub stars1: graphics::Image,
+    pub stars2: graphics::Image,
     pub explosion: graphics::Image,
     pub explosion_sound: audio::Source,
     pub music: audio::Source,
@@ -28,10 +30,13 @@ impl Assets {
             title_font: graphics::Font::new(ctx, "/title.ttf").unwrap(),
             main_font: graphics::Font::new(ctx, "/main.ttf").unwrap(),
             turret: graphics::Image::new(ctx, "/turret.png").unwrap(),
-            background: graphics::Image::new(ctx, "/spacebg1.jpg").unwrap(),
+            background: graphics::Image::new(ctx, "/spacebg3.jpg").unwrap(),
+            stars1: graphics::Image::new(ctx, "/stars1.png").unwrap(),
+            stars2: graphics::Image::new(ctx, "/stars2.png").unwrap(),
             explosion: graphics::Image::new(ctx, "/explosion.png").unwrap(),
             explosion_sound: audio::Source::new(ctx, "/explosion.wav").unwrap(),
             music: audio::Source::new(ctx, "/music.ogg").unwrap(),
         }
     }
 }
+

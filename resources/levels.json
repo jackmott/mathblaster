@@ -24,7 +24,7 @@
         ]
       }
     ],
-    "background_file": "/spacebg1.jpg",
+    "background_file": "/spacebg2.jpg",
     "title": "Addition Attack!",
     "unlocked": true
   },
@@ -87,6 +87,6 @@
     ],
     "background_file": "/spacebg2.jpg",
     "title": "Subtraction Subterfuge",
-    "unlocked": false
+    "unlocked": true
   }
 ]
