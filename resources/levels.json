@@ -4,8 +4,8 @@
       {
         "groups": [
           {
-            "speed": 5.5,
-            "max_number": 10,
+            "speed": 1.5,
+            "max_number": 5,
             "min_number": 0,
             "operation": "Add",
             "num_ships": 5
@@ -19,12 +19,23 @@
             "max_number": 5,
             "min_number": 0,
             "operation": "Add",
-            "num_ships": 5
+            "num_ships": 8
+          }
+        ]
+      },
+      {
+        "groups": [
+          {
+            "speed": 1.5,
+            "max_number": 10,
+            "min_number": 0,
+            "operation": "Add",
+            "num_ships": 10
           }
         ]
       }
     ],
-    "background_file": "/spacebg2.jpg",
+    "background_file": "/spacebg1.jpg",
     "title": "Addition Attack!",
     "unlocked": true
   },
@@ -37,14 +48,7 @@
             "max_number": 5,
             "min_number": 0,
             "operation": "Subtract",
-            "num_ships": 10
-          },
-          {
-            "speed": 2.5,
-            "max_number": 5,
-            "min_number": 0,
-            "operation": "Add",
-            "num_ships": 3
+            "num_ships": 5
           }
         ]
       },
@@ -55,14 +59,7 @@
             "max_number": 5,
             "min_number": 0,
             "operation": "Subtract",
-            "num_ships": 10
-          },
-          {
-            "speed": 3.5,
-            "max_number": 5,
-            "min_number": 0,
-            "operation": "Add",
-            "num_ships": 3
+            "num_ships": 8
           }
         ]
       },
@@ -74,19 +71,174 @@
             "min_number": 0,
             "operation": "Subtract",
             "num_ships": 10
-          },
-          {
-            "speed": 2.5,
-            "max_number": 10,
-            "min_number": 0,
-            "operation": "Add",
-            "num_ships": 3
           }
         ]
       }
     ],
     "background_file": "/spacebg2.jpg",
-    "title": "Subtraction Subterfuge",
+    "title": "Subtraction Subterfuge!",
     "unlocked": true
+  },
+  {
+    "waves": [
+      {
+        "groups": [
+          {
+            "speed": 1.5,
+            "max_number": 5,
+            "min_number": 0,
+            "operation": "Multiply",
+            "num_ships": 5
+          }
+        ]
+      },
+      {
+        "groups": [
+          {
+            "speed": 2.5,
+            "max_number": 5,
+            "min_number": 0,
+            "operation": "Multiply",
+            "num_ships": 8
+          }
+        ]
+      },
+      {
+        "groups": [
+          {
+            "speed": 1.5,
+            "max_number": 5,
+            "min_number": 0,
+            "operation": "Multiply",
+            "num_ships": 10
+          }
+        ]
+      }
+    ],
+    "background_file": "/spacebg3.jpg",
+    "title": "Multiplication Mayhem!",
+    "unlocked": false
+  },
+  {
+    "waves": [
+      {
+        "groups": [
+          {
+            "speed": 1.5,
+            "max_number": 10,
+            "min_number": 0,
+            "operation": "Divide",
+            "num_ships": 5
+          }
+        ]
+      },
+      {
+        "groups": [
+          {
+            "speed": 2.5,
+            "max_number": 10,
+            "min_number": 0,
+            "operation": "Divide",
+            "num_ships": 8
+          }
+        ]
+      },
+      {
+        "groups": [
+          {
+            "speed": 2.5,
+            "max_number": 10,
+            "min_number": 0,
+            "operation": "Divide",
+            "num_ships": 10
+          }
+        ]
+      }
+    ],
+    "background_file": "/spacebg4.jpg",
+    "title": "Division Disaster!",
+    "unlocked": false
+  },
+  {
+    "waves": [
+      {
+        "groups": [
+          {
+            "speed": 3.5,
+            "max_number": 10,
+            "min_number": 0,
+            "operation": "Add",
+            "num_ships": 5
+          },
+          {
+            "speed": 2.5,
+            "max_number": 10,
+            "min_number": 0,
+            "operation": "Subtract",
+            "num_ships": 5
+          }
+        ]
+      },
+      {
+        "groups": [
+          {
+            "speed": 3.5,
+            "max_number": 10,
+            "min_number": 0,
+            "operation": "Add",
+            "num_ships": 5
+          },
+          {
+            "speed": 2.5,
+            "max_number": 10,
+            "min_number": 0,
+            "operation": "Subtract",
+            "num_ships": 5
+          },
+          {
+            "speed": 1.5,
+            "max_number": 5,
+            "min_number": 0,
+            "operation": "Multiply",
+            "num_ships": 5
+          }
+        ]
+      },
+      {
+        "groups": [
+          {
+            "speed": 3.5,
+            "max_number": 10,
+            "min_number": 0,
+            "operation": "Add",
+            "num_ships": 5
+          },
+          {
+            "speed": 2.5,
+            "max_number": 10,
+            "min_number": 0,
+            "operation": "Subtract",
+            "num_ships": 5
+          },
+          {
+            "speed": 1.5,
+            "max_number": 5,
+            "min_number": 0,
+            "operation": "Multiply",
+            "num_ships": 5
+          },
+          {
+            "speed": 1.5,
+            "max_number": 10,
+            "min_number": 0,
+            "operation": "Divide",
+            "num_ships": 5
+          }
+        ]
+      }
+    ],
+    "background_file": "/spacebg5.jpg",
+    "title": "The Final Assault!",
+    "unlocked": false
   }
 ]

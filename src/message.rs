@@ -1,4 +1,3 @@
-use ggez::graphics::{self};
 use ggez::Context;
 
 use crate::assets::*;
@@ -14,7 +13,7 @@ pub struct Message {
 impl Message {
     pub fn new(text: String, duration: f32, assets: &Assets, ctx: &mut Context) -> Message {
         Message {
-            text: MBText::new(text, &assets.title_font, WHITE, 64.0, ctx),
+            text: MBText::new(text, &assets.main_font, WHITE, 128.0, ctx),
             duration: duration,
             elapsed: 0.0,
         }

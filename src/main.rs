@@ -1,8 +1,13 @@
+// todo - transition effect when moving to next level?
+// todo - transition screen after losing a life?
+// todo fix font and display on turret numbers
+
+
 use ggez;
 use ggez::audio::SoundSource;
 use ggez::conf;
 use ggez::event::{self, KeyCode, KeyMods};
-use ggez::graphics::{self, Color};
+use ggez::graphics::{self};
 use ggez::input::keyboard;
 
 use ggez::nalgebra as na;
@@ -112,7 +117,7 @@ fn gen_aliens(wave: &Wave, assets: &Assets) -> Vec<Alien> {
                 operation: group.operation,
                 speed: group.speed,
                 pos: na::Point2::new(x, -(i as i32) as f32 * 0.1),
-                text: graphics::Text::new((text, assets.main_font, 24.0)),
+                text: graphics::Text::new((text, assets.number_font, 24.0)),
                 answer: answer,
                 explosion: Explosion::new(0.0, na::Point2::new(0.0, 0.0)),
                 state: AlienState::Alive,
@@ -181,21 +186,21 @@ impl MainState {
                     "You Have Died".to_string(),
                     &assets.title_font,
                     BLUE,
-                    75.0,
+                    128.0,
                     ctx,
                 ),
                 won_text: MBText::new(
-                    "You Have Won".to_string(),
+                    "You Win!".to_string(),
                     &assets.main_font,
                     BLUE,
-                    75.0,
+                    128.0,
                     ctx,
                 ),
                 press_enter: MBText::new(
                     "Press Enter".to_string(),
                     &assets.main_font,
                     WHITE,
-                    42.0,
+                    64.0,
                     ctx,
                 ),
                 math_blaster: MBText::new(
@@ -208,8 +213,8 @@ impl MainState {
                 level_complete: MBText::new(
                     "Level Complete!".to_string(),
                     &assets.title_font,
-                    WHITE,
-                    75.0,
+                    BLUE,
+                    128.0,
                     ctx,
                 ),
                 level_names: levels
@@ -235,7 +240,7 @@ impl MainState {
                 src_pixel_width: assets.background.width() as f32,
                 src_pixel_height: assets.background.height() as f32,
                 stars1_pos: 0.0,
-                stars2_pos: 0.0,
+                stars2_pos: 0.0,                
             },
             state: GameState::StartMenu,
             dt: std::time::Duration::new(0, 0),
@@ -251,14 +256,10 @@ impl MainState {
         })
     }
 
-    fn set_level_wave(&mut self, level: usize, wave: usize, ctx: &mut Context) {
+    fn set_level_wave(&mut self, level: usize, wave: usize) {
         if level > self.current_level {
             self.state = GameState::LevelComplete;
-            self.assets.background = graphics::Image::new(
-                ctx,
-                self.levels[self.current_level + 1].background_file.clone(),
-            )
-            .unwrap();
+            let _ = self.assets.clap_sound.play_detached();                          
         }
         self.current_level = level;
         self.current_wave = wave;
@@ -276,12 +277,18 @@ impl MainState {
             if self.current_level + 1 >= self.levels.len() {
                 self.state = GameState::Won;
             } else {
-                self.set_level_wave(self.current_level + 1, 0, ctx)
+                self.set_level_wave(self.current_level + 1, 0)
             }
         } else {
-            self.set_level_wave(self.current_level, self.current_wave + 1, ctx);
+            self.set_level_wave(self.current_level, self.current_wave + 1);
             self.messages.push_back(Message::new(
-                "Wave ".to_string() + &self.current_wave.to_string(),
+                "Wave Eliminated!".to_string(),
+                2000.0,
+                &self.assets,
+                ctx,
+            ));
+            self.messages.push_back(Message::new(
+                "Wave ".to_string() + &(self.current_wave + 1).to_string(),
                 2000.0,
                 &self.assets,
                 ctx,
@@ -290,7 +297,7 @@ impl MainState {
     }
     fn update_start_menu(&mut self, ctx: &mut Context) {
         if keyboard::is_key_pressed(ctx, KeyCode::Return) {
-            self.set_level_wave(self.level_selection, 0, ctx);
+            self.set_level_wave(self.level_selection, 0);
             self.messages.push_back(Message::new(
                 self.levels[self.level_selection].title.clone(),
                 2000.0,
@@ -335,6 +342,11 @@ impl MainState {
     }
     fn update_level_complete(&mut self, ctx: &mut Context) {
         if keyboard::is_key_pressed(ctx, KeyCode::Return) {
+            self.assets.background = graphics::Image::new(
+                ctx,
+                self.levels[self.current_level].background_file.clone(),
+            )
+            .unwrap();
             self.state = GameState::Playing;
             self.levels[self.current_level].push_title(&mut self.messages, &self.assets, ctx);
             self.messages.push_back(Message::new(
@@ -367,7 +379,7 @@ impl MainState {
             if self.lives > 0 {
                 self.lives -= 1;
                 self.turret = Turret::new(&self.assets);
-                self.set_level_wave(self.current_level, 0, ctx);
+                self.set_level_wave(self.current_level, 0);
                 self.state = GameState::Playing;
                 self.levels[self.current_level].push_title(&mut self.messages, &self.assets, ctx);
             } else {
@@ -675,15 +687,14 @@ pub fn main() -> GameResult {
         .add_resource_path(resource_dir)
         .window_mode(
             conf::WindowMode::default()
-                .fullscreen_type(conf::FullscreenType::Windowed)
+                .fullscreen_type(conf::FullscreenType::True)
                 .resizable(true),
         );
 
     let (ctx, event_loop) = &mut cb.build()?;
-    let state = &mut MainState::new(ctx)?;
-    state.assets.explosion_sound.set_volume(0.05);
+    let state = &mut MainState::new(ctx)?;    
     state.assets.music.set_repeat(true);
-    state.assets.music.set_volume(0.01);
+    //state.assets.music.set_volume(0.07);
     let _ = state.assets.music.play_detached();
     state.dt = std::time::Duration::new(0, 0);
     println!("about to call run");

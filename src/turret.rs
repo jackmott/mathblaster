@@ -1,4 +1,4 @@
-use ggez::graphics::{self, Color, DrawParam};
+use ggez::graphics::{self,DrawParam};
 use ggez::nalgebra as na;
 use ggez::Context;
 use rand::*;

@@ -1,10 +1,5 @@
-use ggez::event::KeyCode;
-use ggez::graphics::{self, Color};
-use ggez::input::keyboard;
+use ggez::graphics::{Color};
 use ggez::nalgebra as na;
-use ggez::Context;
-
-use crate::assets::*;
 
 pub const WHITE: Color = Color {
     r: 1.0,
@@ -13,9 +8,9 @@ pub const WHITE: Color = Color {
     a: 1.0,
 };
 pub const BLUE: Color = Color {
-    r: 0.0,
+    r: 0.75,
     g: 0.0,
-    b: 1.0,
+    b: 0.25,
     a: 1.0,
 };
 pub const GRAY: Color = Color {

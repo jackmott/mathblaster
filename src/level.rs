@@ -86,16 +86,7 @@ impl Level {
                 waves: vec![
                     Wave {
                         groups: vec![WaveGroup {
-                            speed: 5.5,
-                            max_number: 10,
-                            min_number: 0,
-                            operation: Operation::Divide,
-                            num_ships: 10,
-                        }],
-                    },
-                    Wave {
-                        groups: vec![WaveGroup {
-                            speed: 2.5,
+                            speed: 1.5,
                             max_number: 5,
                             min_number: 0,
                             operation: Operation::Add,
@@ -104,19 +95,28 @@ impl Level {
                     },
                     Wave {
                         groups: vec![WaveGroup {
+                            speed: 2.5,
+                            max_number: 5,
+                            min_number: 0,
+                            operation: Operation::Add,
+                            num_ships: 8,
+                        }],
+                    },
+                    Wave {
+                        groups: vec![WaveGroup {
                             speed: 1.5,
                             max_number: 10,
                             min_number: 0,
                             operation: Operation::Add,
-                            num_ships: 5,
+                            num_ships: 10,
                         }],
-                    },
+                    },                    
                 ],
             },
             //Level 2
             Level {
                 unlocked:false,
-                title: "Subtraction Subterfuge".to_string(),
+                title: "Subtraction Subterfuge!".to_string(),
                 background_file: "/spacebg2.jpg".to_string(),
                 waves: vec![
                     Wave {
@@ -126,15 +126,8 @@ impl Level {
                                 max_number: 5,
                                 min_number: 0,
                                 operation: Operation::Subtract,
-                                num_ships: 10,
-                            },
-                            WaveGroup {
-                                speed: 2.5,
-                                max_number: 5,
-                                min_number: 0,
-                                operation: Operation::Add,
-                                num_ships: 3,
-                            },
+                                num_ships: 5,
+                            }                          
                         ],
                     },
                     Wave {
@@ -144,15 +137,8 @@ impl Level {
                                 max_number: 5,
                                 min_number: 0,
                                 operation: Operation::Subtract,
-                                num_ships: 10,
-                            },
-                            WaveGroup {
-                                speed: 3.5,
-                                max_number: 5,
-                                min_number: 0,
-                                operation: Operation::Add,
-                                num_ships: 3,
-                            },
+                                num_ships: 8,
+                            }                          
                         ],
                     },
                     Wave {
@@ -163,14 +149,172 @@ impl Level {
                                 min_number: 0,
                                 operation: Operation::Subtract,
                                 num_ships: 10,
+                            },                            
+                        ],
+                    },
+                ],
+            },
+            //Level 3
+            Level {
+                unlocked:false,
+                title: "Multiplication Mayhem!".to_string(),
+                background_file: "/spacebg3.jpg".to_string(),
+                waves: vec![
+                    Wave {
+                        groups: vec![
+                            WaveGroup {
+                                speed: 1.5,
+                                max_number: 5,
+                                min_number: 0,
+                                operation: Operation::Multiply,
+                                num_ships: 5,
+                            }                          
+                        ],
+                    },
+                    Wave {
+                        groups: vec![
+                            WaveGroup {
+                                speed: 2.5,
+                                max_number: 5,
+                                min_number: 0,
+                                operation: Operation::Multiply,
+                                num_ships: 8,
+                            }                            
+                        ],
+                    },
+                    Wave {
+                        groups: vec![
+                             WaveGroup {
+                                speed: 1.5,
+                                max_number: 5,
+                                min_number: 0,
+                                operation: Operation::Multiply,
+                                num_ships: 10,
+                            }                            
+                        ],
+                    },
+                ],
+            },
+             //Level 4
+            Level {
+                unlocked:false,
+                title: "Division Disaster!".to_string(),
+                background_file: "/spacebg4.jpg".to_string(),
+                waves: vec![
+                    Wave {
+                        groups: vec![
+                            WaveGroup {
+                                speed: 1.5,
+                                max_number: 10,
+                                min_number: 0,
+                                operation: Operation::Divide,
+                                num_ships: 5,
+                            }                          
+                        ],
+                    },
+                    Wave {
+                        groups: vec![
+                            WaveGroup {
+                                speed: 2.5,
+                                max_number: 10,
+                                min_number: 0,
+                                operation: Operation::Divide,
+                                num_ships: 8,
+                            }                            
+                        ],
+                    },
+                    Wave {
+                        groups: vec![
+                             WaveGroup {
+                                speed: 2.5,
+                                max_number: 10,
+                                min_number: 0,
+                                operation: Operation::Divide,
+                                num_ships: 10,
+                            }                            
+                        ],
+                    },
+                ],
+            },
+            //Level 5
+            Level {
+                unlocked:false,
+                title: "The Final Assault!".to_string(),
+                background_file: "/spacebg5.jpg".to_string(),
+                waves: vec![
+                    Wave {
+                        groups: vec![
+                            WaveGroup {
+                                speed: 3.5,
+                                max_number: 10,
+                                min_number: 0,
+                                operation: Operation::Add,
+                                num_ships: 5,
                             },
                             WaveGroup {
                                 speed: 2.5,
                                 max_number: 10,
                                 min_number: 0,
+                                operation: Operation::Subtract,
+                                num_ships: 5,
+                            }                         
+                        ],
+                    },
+                    Wave {
+                        groups: vec![
+                            WaveGroup {
+                                speed: 3.5,
+                                max_number: 10,
+                                min_number: 0,
                                 operation: Operation::Add,
-                                num_ships: 3,
+                                num_ships: 5,
                             },
+                            WaveGroup {
+                                speed: 2.5,
+                                max_number: 10,
+                                min_number: 0,
+                                operation: Operation::Subtract,
+                                num_ships: 5,
+                            },
+                            WaveGroup {
+                                speed: 1.5,
+                                max_number: 5,
+                                min_number: 0,
+                                operation: Operation::Multiply,
+                                num_ships: 5,
+                            }   
+                        ],
+                    },
+                    Wave {
+                        groups: vec![
+                             WaveGroup {
+                                speed: 3.5,
+                                max_number: 10,
+                                min_number: 0,
+                                operation: Operation::Add,
+                                num_ships: 5,
+                            },
+                            WaveGroup {
+                                speed: 2.5,
+                                max_number: 10,
+                                min_number: 0,
+                                operation: Operation::Subtract,
+                                num_ships: 5,
+                            },
+                            WaveGroup {
+                                speed: 1.5,
+                                max_number: 5,
+                                min_number: 0,
+                                operation: Operation::Multiply,
+                                num_ships: 5,
+                            },
+                            WaveGroup {
+                                speed: 1.5,
+                                max_number: 10,
+                                min_number: 0,
+                                operation: Operation::Divide,
+                                num_ships: 5,
+                            }                          
                         ],
                     },
                 ],

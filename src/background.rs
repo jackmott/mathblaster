@@ -9,15 +9,16 @@ pub struct Background {
     pub src_pixel_width: f32,
     pub src_pixel_height: f32,
     pub stars1_pos: f32,
-    pub stars2_pos: f32,
+    pub stars2_pos: f32,    
 }
 
 impl Background {
      pub fn update(&mut self, dt: std::time::Duration) {
         //update the parallax stars are different rates
         let t = dt.as_millis() as f32;
-        self.stars1_pos = (self.stars1_pos + t/32000.0) % 1.0;
-        self.stars2_pos = (self.stars2_pos + t/16000.0) % 1.0;
+        self.stars1_pos = (self.stars1_pos + t/80_000.0) % 1.0;
+        self.stars2_pos = (self.stars2_pos + t/16_000.0) % 1.0;        
+
     }
 
     pub fn draw(&mut self,ctx: &mut Context, assets: &Assets) {
@@ -25,13 +26,11 @@ impl Background {
             graphics::DrawParam::new().scale(self.scale(graphics::size(ctx)));
         let _ = graphics::draw(ctx, &assets.background, background_param);
 
-        
-    
+            
         let (screen_wf,screen_hf) = graphics::size(ctx);
         let screen_w = screen_wf as i32;
         let screen_h = screen_hf as i32;
-        
-        
+                
         //stars 1       
         let w = (assets.stars1.width() / 2) as usize;
         let h = (assets.stars1.height() / 2) as usize;
@@ -74,12 +73,8 @@ impl Background {
             }
 
             y += delta as i32;
-        }        
+        }                                                   
 
-                               
-
-    
-        
     }
 }
 
