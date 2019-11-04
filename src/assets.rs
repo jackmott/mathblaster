@@ -20,7 +20,7 @@ pub struct Assets {
 }
 
 impl Assets {
-    pub fn new(ctx: &mut Context) -> Assets {
+    pub fn new(ctx: &mut Context, startBg: String) -> Assets {
         Assets {
             add_ship: graphics::Image::new(ctx, "/add-ship.png").unwrap(),
             sub_ship: graphics::Image::new(ctx, "/sub-ship.png").unwrap(),
@@ -30,7 +30,7 @@ impl Assets {
             title_font: graphics::Font::new(ctx, "/title.ttf").unwrap(),
             main_font: graphics::Font::new(ctx, "/main.ttf").unwrap(),
             turret: graphics::Image::new(ctx, "/turret.png").unwrap(),
-            background: graphics::Image::new(ctx, "/spacebg3.jpg").unwrap(),
+            background: graphics::Image::new(ctx, startBg).unwrap(),
             stars1: graphics::Image::new(ctx, "/stars1.png").unwrap(),
             stars2: graphics::Image::new(ctx, "/stars2.png").unwrap(),
             explosion: graphics::Image::new(ctx, "/explosion.png").unwrap(),

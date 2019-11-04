@@ -168,7 +168,7 @@ struct MainState {
 impl MainState {
     fn new(ctx: &mut Context) -> GameResult<MainState> {
         let levels = Level::load_from_file();
-        let assets = Assets::new(ctx);
+        let assets = Assets::new(ctx,levels[0].background_file.clone());
         let messages = VecDeque::new();
         let aliens = gen_aliens(&levels[0].waves[0], &assets);
         let target = get_lowest_living_alien(&aliens);
