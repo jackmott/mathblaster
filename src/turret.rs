@@ -1,4 +1,4 @@
-use ggez::graphics::{self,DrawParam};
+use ggez::graphics::{self, DrawParam};
 use ggez::nalgebra as na;
 use ggez::Context;
 use rand::*;
@@ -10,7 +10,7 @@ use crate::ggez_utility::*;
 pub enum TurretState {
     Firing,
     Resting,
-    //todo Rotating
+    //todo Rotating?
 }
 
 pub struct Turret {
@@ -27,7 +27,7 @@ impl Scalable for Turret {
         na::Point2::new(0.5, 0.9)
     }
     fn pct_dimensions(&self) -> (f32, f32) {
-        (0.035, 0.05)
+        (0.030, 0.05)
     }
     fn src_pixel_dimensions(&self) -> (f32, f32) {
         (self.src_pixel_width, self.src_pixel_height)
@@ -47,7 +47,7 @@ impl Turret {
         Turret {
             rotation: 0.0,
             raw_text: "".to_string(),
-            text: graphics::Text::new(("", assets.main_font, 24.0)),
+            text: graphics::Text::new(("", assets.number_font, 24.0)),
             explosions: explosions,
             state: TurretState::Resting,
             src_pixel_width: assets.turret.width() as f32,

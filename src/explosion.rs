@@ -52,8 +52,7 @@ impl Explosion {
     pub fn draw(&mut self, ctx: &mut Context, assets: &mut Assets) {
         if self.elapsed >= self.start_time {
             if !self.sound_played {
-                
-                let _ = assets.explosion_sound.play_detached();                
+                let _ = assets.explosion_sound.play_detached();
                 self.sound_played = true;
             }
             if self.elapsed - self.start_time <= self.duration {

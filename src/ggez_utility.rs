@@ -1,4 +1,4 @@
-use ggez::graphics::{Color};
+use ggez::graphics::Color;
 use ggez::nalgebra as na;
 
 pub const WHITE: Color = Color {

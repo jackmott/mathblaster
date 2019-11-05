@@ -1,7 +1,7 @@
 // todo - transition effect when moving to next level?
 // todo - transition screen after losing a life?
-// todo fix font and display on turret numbers
-
+// todo - fix font and display on turret numbers
+// todo - easy/norma/hard/nightmare modes
 
 use ggez;
 use ggez::audio::SoundSource;
@@ -20,6 +20,7 @@ use std::path;
 
 mod alien;
 mod assets;
+mod background;
 mod crosshair;
 mod explosion;
 mod ggez_utility;
@@ -27,11 +28,10 @@ mod level;
 mod mbtext;
 mod message;
 mod turret;
-mod background;
 
-use crate::background::*;
 use crate::alien::*;
 use crate::assets::*;
+use crate::background::*;
 use crate::crosshair::*;
 use crate::explosion::*;
 use crate::ggez_utility::*;
@@ -58,7 +58,7 @@ fn get_lowest_living_alien(aliens: &Vec<Alien>) -> Option<usize> {
     }
 }
 
-fn gen_aliens(wave: &Wave, assets: &Assets) -> Vec<Alien> {
+fn gen_aliens(wave: &Wave, assets: &Assets,difficulty:usize) -> Vec<Alien> {
     let mut aliens: Vec<Alien> = Vec::new();
     let mut rng = rand::thread_rng();
     for group in &wave.groups {
@@ -69,18 +69,21 @@ fn gen_aliens(wave: &Wave, assets: &Assets) -> Vec<Alien> {
             Operation::Divide => &assets.div_ship,
         };
         let alien_img_width = alien_img.width() as f32;
-        let alien_img_height = alien_img.height() as f32;
+        let alien_img_height = alien_img.height() as f32;       
+        let num_ships = (group.num_ships as f32 * NUM_SHIPS_DIFFICULTY[difficulty]) as i32; 
+        for i in 0..num_ships {
+            let min_number = (group.min_number as f32 * MIN_NUMBER_DIFFICULTY[difficulty]) as i32;
+            let max_number = (group.max_number as f32 * MAX_NUMBER_DIFFICULTY[difficulty]) as i32;
 
-        for i in 0..group.num_ships {
             let (num1, num2) = if group.operation == Operation::Divide {
                 let mut a;
                 let mut b;
                 loop {
-                    a = rng.gen_range(group.min_number, group.max_number);
+                    a = rng.gen_range(min_number, max_number);
                     b = if a == group.min_number {
                         a
                     } else {
-                        rng.gen_range(group.min_number, a)
+                        rng.gen_range(min_number, a)
                     };
                     if b == 0 {
                         continue;
@@ -92,31 +95,36 @@ fn gen_aliens(wave: &Wave, assets: &Assets) -> Vec<Alien> {
                 (a, b)
             } else {
                 (
-                    rng.gen_range(group.min_number, group.max_number),
-                    rng.gen_range(group.min_number, group.max_number),
+                    rng.gen_range(min_number, max_number),
+                    rng.gen_range(min_number, max_number),
                 )
             };
 
             let (answer, op) = match group.operation {
                 Operation::Add => (num1 + num2, "+"),
                 Operation::Subtract => (num1 - num2, "-"),
-                Operation::Multiply => (num1 * num2, "x"),
+                Operation::Multiply => (num1 * num2, "X"),
                 Operation::Divide => (num1 / num2, "/"),
             };
             let text = num1.to_string() + op + &num2.to_string();
+
+            // generate an x coordinate for aliens, make
+            // sure it isn't too close to aliens at nearby
+            // y so they don't overlap
             let mut x: f32 = rng.gen_range(0.05, 0.95);
             while aliens
                 .iter()
                 .rev()
-                .take(5)
+                .take(3)
                 .any(|alien| (alien.pos[0] - x).abs() < 0.1)
             {
                 x = rng.gen_range(0.05, 0.95);
             }
+
             let alien = Alien {
                 operation: group.operation,
-                speed: group.speed,
-                pos: na::Point2::new(x, -(i as i32) as f32 * 0.1),
+                speed: group.speed as f32 * SPEED_DIFFICULTY[difficulty],
+                pos: na::Point2::new(x, -(i as i32) as f32 * 0.3),
                 text: graphics::Text::new((text, assets.number_font, 24.0)),
                 answer: answer,
                 explosion: Explosion::new(0.0, na::Point2::new(0.0, 0.0)),
@@ -131,11 +139,10 @@ fn gen_aliens(wave: &Wave, assets: &Assets) -> Vec<Alien> {
     aliens
 }
 
-
-
 #[derive(Debug)]
 enum GameState {
-    StartMenu,
+    DifficultySelect,
+    LevelSelect,
     LevelComplete,
     Playing,
     Dying,
@@ -147,9 +154,10 @@ struct TextState {
     dead_text: MBText,
     won_text: MBText,
     press_enter: MBText,
-    math_blaster: MBText,
+    math_title: MBText,
     level_complete: MBText,
     level_names: Vec<MBText>,
+    difficulty_names: Vec<MBText>,
 }
 struct MainState {
     messages: VecDeque<Message>,
@@ -167,15 +175,16 @@ struct MainState {
     lives: usize,
     crosshair: Crosshair,
     level_selection: usize,
+    difficulty_selection: usize,
     up_key: Option<KeyCode>,
 }
 
 impl MainState {
     fn new(ctx: &mut Context) -> GameResult<MainState> {
         let levels = Level::load_from_file();
-        let assets = Assets::new(ctx,levels[0].background_file.clone());
+        let assets = Assets::new(ctx, levels[0].background_file.clone());
         let messages = VecDeque::new();
-        let aliens = gen_aliens(&levels[0].waves[0], &assets);
+        let aliens = Vec::new();
         let target = get_lowest_living_alien(&aliens);
 
         Ok(MainState {
@@ -183,19 +192,13 @@ impl MainState {
             aliens: aliens,
             text: TextState {
                 dead_text: MBText::new(
-                    "You Have Died".to_string(),
+                    "You  Have  Died".to_string(),
                     &assets.title_font,
                     BLUE,
                     128.0,
                     ctx,
                 ),
-                won_text: MBText::new(
-                    "You Win!".to_string(),
-                    &assets.main_font,
-                    BLUE,
-                    128.0,
-                    ctx,
-                ),
+                won_text: MBText::new("You  Win!".to_string(), &assets.main_font, BLUE, 128.0, ctx),
                 press_enter: MBText::new(
                     "Press Enter".to_string(),
                     &assets.main_font,
@@ -203,15 +206,15 @@ impl MainState {
                     64.0,
                     ctx,
                 ),
-                math_blaster: MBText::new(
-                    "Math Blaster".to_string(),
+                math_title: MBText::new(
+                    "Math  Defense".to_string(),
                     &assets.title_font,
                     BLUE,
                     128.0,
                     ctx,
                 ),
                 level_complete: MBText::new(
-                    "Level Complete!".to_string(),
+                    "Level  Complete!".to_string(),
                     &assets.title_font,
                     BLUE,
                     128.0,
@@ -230,6 +233,7 @@ impl MainState {
                         )
                     })
                     .collect(),
+                difficulty_names: DIFFICULTY_NAMES.iter().map(|name| { MBText::new_blink(name.to_string(),&assets.main_font,WHITE,GRAY,64.0,ctx,)}).collect(),
             },
             turret: Turret::new(&assets),
             levels: levels,
@@ -240,9 +244,9 @@ impl MainState {
                 src_pixel_width: assets.background.width() as f32,
                 src_pixel_height: assets.background.height() as f32,
                 stars1_pos: 0.0,
-                stars2_pos: 0.0,                
+                stars2_pos: 0.0,
             },
-            state: GameState::StartMenu,
+            state: GameState::DifficultySelect,
             dt: std::time::Duration::new(0, 0),
             lives: 2,
             crosshair: Crosshair {
@@ -252,27 +256,32 @@ impl MainState {
             },
             assets: assets,
             level_selection: 0,
+            difficulty_selection:0,
             up_key: None,
         })
+    }
+
+    fn load_level_wave(&mut self, level: usize, wave: usize) {
+        self.current_level = level;
+        self.current_wave = wave;
+        self.target = None;
+        let wave = &self.levels[self.current_level].waves[self.current_wave];
+        self.aliens = gen_aliens(wave, &self.assets,self.difficulty_selection);
+        self.target = get_lowest_living_alien(&self.aliens);
     }
 
     fn set_level_wave(&mut self, level: usize, wave: usize) {
         if level > self.current_level {
             self.state = GameState::LevelComplete;
-            let _ = self.assets.clap_sound.play_detached();                          
+            let _ = self.assets.clap_sound.play_detached();
         }
-        self.current_level = level;
-        self.current_wave = wave;
-        self.target = None;
-        let wave = &self.levels[self.current_level].waves[self.current_wave];
-        self.aliens = gen_aliens(wave, &self.assets);
-        self.target = get_lowest_living_alien(&self.aliens);
+        self.load_level_wave(level, wave);
     }
     fn increment_level_wave(&mut self, ctx: &mut Context) {
         //if we were at the last wave already then go to next level
         if self.current_wave + 1 >= self.levels[self.current_level].waves.len() {
             //unlock the next level and save the json
-            self.levels[self.current_level+1].unlocked = true;
+            self.levels[self.current_level + 1].unlocked[self.difficulty_selection] = true;
             Level::save_levels(&self.levels);
             if self.current_level + 1 >= self.levels.len() {
                 self.state = GameState::Won;
@@ -295,36 +304,50 @@ impl MainState {
             ));
         }
     }
-    fn update_start_menu(&mut self, ctx: &mut Context) {
-        if keyboard::is_key_pressed(ctx, KeyCode::Return) {
-            self.set_level_wave(self.level_selection, 0);
-            self.messages.push_back(Message::new(
-                self.levels[self.level_selection].title.clone(),
-                2000.0,
-                &self.assets,
-                ctx,
-            ));
-            self.messages.push_back(Message::new(
-                "Wave 1".to_string(),
-                2000.0,
-                &self.assets,
-                ctx,
-            ));
-            self.lives = 2;
-            self.turret = Turret::new(&self.assets);
-            self.state = GameState::Playing;
-        }
-
-        let unlocked_count = self.levels.iter().filter(|level| level.unlocked).count();
-
+    fn update_difficulty_select(&mut self, _ctx: &mut Context) {        
         if let Some(keycode) = self.up_key {
-            //we are dealing with a keycode so clear it
-            self.up_key = None;
-            if keycode == KeyCode::Down {
+            if keycode == KeyCode::Return {
+                self.state = GameState::LevelSelect;
+            }
+            else if keycode == KeyCode::Down {
+                self.difficulty_selection = (self.difficulty_selection + 1) % DIFFICULTY_NAMES.len();
+            } else if keycode == KeyCode::Up {
+                self.difficulty_selection = 
+                    if self.difficulty_selection == 0 {
+                        DIFFICULTY_NAMES.len() - 1
+                    } else {
+                        self.difficulty_selection - 1
+                    };
+            }
+        }        
+    }
+
+    fn update_level_select(&mut self, ctx: &mut Context) {
+        let unlocked_count = self.levels.iter().filter(|level| level.unlocked[self.difficulty_selection]).count();
+        if let Some(keycode) = self.up_key {
+            if keycode == KeyCode::Return {
+                self.load_level_wave(self.level_selection, 0);
+                self.messages.push_back(Message::new(
+                    self.levels[self.level_selection].title.clone(),
+                    2000.0,
+                    &self.assets,
+                    ctx,
+                ));
+                self.messages.push_back(Message::new(
+                    "Wave 1".to_string(),
+                    2000.0,
+                    &self.assets,
+                    ctx,
+                ));
+                self.lives = 2;
+                self.turret = Turret::new(&self.assets);
+                self.state = GameState::Playing;
+            }               
+            else if keycode == KeyCode::Down {
                 self.level_selection = (self.level_selection + 1) % unlocked_count;
             } else if keycode == KeyCode::Up {
                 self.level_selection = if self.level_selection == 0 {
-                    unlocked_count-1
+                    unlocked_count - 1
                 } else {
                     self.level_selection - 1
                 };
@@ -335,18 +358,19 @@ impl MainState {
             level_name.update(self.dt)
         }
     }
+
     fn update_won(&mut self, ctx: &mut Context) {
-        if keyboard::is_key_pressed(ctx, KeyCode::Return) {
-            self.state = GameState::StartMenu;
+         if let Some(keycode) = self.up_key {
+            if keycode == KeyCode::Return {
+                self.state = GameState::LevelSelect;
+            }
         }
     }
     fn update_level_complete(&mut self, ctx: &mut Context) {
         if keyboard::is_key_pressed(ctx, KeyCode::Return) {
-            self.assets.background = graphics::Image::new(
-                ctx,
-                self.levels[self.current_level].background_file.clone(),
-            )
-            .unwrap();
+            self.assets.background =
+                graphics::Image::new(ctx, self.levels[self.current_level].background_file.clone())
+                    .unwrap();
             self.state = GameState::Playing;
             self.levels[self.current_level].push_title(&mut self.messages, &self.assets, ctx);
             self.messages.push_back(Message::new(
@@ -358,10 +382,13 @@ impl MainState {
         }
     }
     fn update_dead(&mut self, ctx: &mut Context) {
-        if keyboard::is_key_pressed(ctx, KeyCode::Return) {
-            self.state = GameState::StartMenu;
+         if let Some(keycode) = self.up_key {
+            if keycode == KeyCode::Return {
+                self.state = GameState::LevelSelect;
+            }
         }
     }
+
     fn update_dying(&mut self, ctx: &mut Context) {
         for alien in &mut self.aliens {
             alien.update(&mut self.turret, ctx, self.dt);
@@ -377,11 +404,32 @@ impl MainState {
             .all(|splosion| splosion.elapsed - splosion.start_time > splosion.duration)
         {
             if self.lives > 0 {
+                
                 self.lives -= 1;
                 self.turret = Turret::new(&self.assets);
-                self.set_level_wave(self.current_level, 0);
+                self.set_level_wave(self.current_level, self.current_wave);
                 self.state = GameState::Playing;
-                self.levels[self.current_level].push_title(&mut self.messages, &self.assets, ctx);
+                if self.lives > 0 {
+                    self.messages.push_back(Message::new(
+                        self.lives.to_string() + &" Guns Left".to_string(),
+                        2000.0,
+                        &self.assets,
+                        ctx,
+                    ));     
+                } else {
+                    self.messages.push_back(Message::new(
+                        "Final Gun! Good Luck!".to_string(),
+                        2000.0,
+                        &self.assets,
+                        ctx,
+                    ));     
+                }
+                self.messages.push_back(Message::new(
+                    "Restarting Wave ".to_string() + &(self.current_wave + 1).to_string(),
+                    2000.0,
+                    &self.assets,
+                    ctx,
+                ));                                      
             } else {
                 self.state = GameState::Dead;
             }
@@ -392,8 +440,6 @@ impl MainState {
         self.background.update(self.dt);
         self.crosshair.update(self.dt);
         if let Some(keycode) = self.up_key {
-            //we are going to deal with the up_key so clear it out
-            self.up_key = None;
             if keycode == KeyCode::Return {
                 match self.turret.raw_text.parse::<i32>() {
                     Ok(n) => match self.target {
@@ -409,14 +455,14 @@ impl MainState {
                 self.turret.raw_text = "".to_string();
                 self.turret.text = graphics::Text::new((
                     self.turret.raw_text.clone(),
-                    self.assets.main_font,
+                    self.assets.number_font,
                     24.0,
                 ));
             } else if keycode == KeyCode::Back {
                 let _ = self.turret.raw_text.pop();
                 self.turret.text = graphics::Text::new((
                     self.turret.raw_text.clone(),
-                    self.assets.main_font,
+                    self.assets.number_font,
                     24.0,
                 ));
             } else if keycode == KeyCode::Left {
@@ -522,11 +568,33 @@ impl MainState {
             self.increment_level_wave(ctx);
         }
     }
-    fn draw_start_menu(&mut self, ctx: &mut Context) {
-        self.background.draw(ctx, &self.assets);        
-        let mut title_pos = self.text.math_blaster.center(ctx);
+    fn draw_difficulty_select(&mut self, ctx: &mut Context) {
+        self.background.draw(ctx, &self.assets);
+        let mut title_pos = self.text.math_title.center(ctx);
         title_pos[1] *= 0.5;
-        self.text.math_blaster.draw(title_pos, ctx);
+        self.text.math_title.draw(title_pos, ctx);
+
+        let window_dimension = graphics::size(ctx);
+        let mut y = 0.4 * window_dimension.1 as f32;
+        
+        for (i, difficulty_name) in self.text.difficulty_names.iter().enumerate() {
+            let vertical_size = difficulty_name.dest_pixel_dimensions(window_dimension).1;
+            let mut center = difficulty_name.center(ctx);
+            center[1] = y;
+            if i == self.difficulty_selection {
+                difficulty_name.draw(center, ctx);
+            } else {
+                difficulty_name.draw_color(center, GRAY, ctx);
+            } 
+            y += vertical_size * 1.075;
+        }
+    }
+
+    fn draw_level_select(&mut self, ctx: &mut Context) {
+        self.background.draw(ctx, &self.assets);
+        let mut title_pos = self.text.math_title.center(ctx);
+        title_pos[1] *= 0.5;
+        self.text.math_title.draw(title_pos, ctx);
 
         let window_dimension = graphics::size(ctx);
         let mut y = 0.4 * window_dimension.1 as f32;
@@ -536,7 +604,7 @@ impl MainState {
             center[1] = y;
             if i == self.level_selection {
                 level_name.draw(center, ctx);
-            } else if self.levels[i].unlocked {
+            } else if self.levels[i].unlocked[self.difficulty_selection] {
                 level_name.draw_color(center, GRAY, ctx);
             } else {
                 level_name.draw_color(center, DARK_GRAY, ctx);
@@ -545,7 +613,7 @@ impl MainState {
         }
     }
     fn draw_won(&mut self, ctx: &mut Context) {
-        self.background.draw(ctx, &self.assets);      
+        self.background.draw(ctx, &self.assets);
         let mut title_pos = self.text.won_text.center(ctx);
         title_pos[1] *= 0.5;
         self.text.press_enter.draw_center(ctx);
@@ -553,7 +621,7 @@ impl MainState {
     }
 
     fn draw_level_complete(&mut self, ctx: &mut Context) {
-        self.background.draw(ctx, &self.assets);      
+        self.background.draw(ctx, &self.assets);
         let mut title_pos = self.text.level_complete.center(ctx);
         title_pos[1] *= 0.5;
         self.text.press_enter.draw_center(ctx);
@@ -561,7 +629,7 @@ impl MainState {
     }
 
     fn draw_dead(&mut self, ctx: &mut Context) {
-        self.background.draw(ctx, &self.assets);      
+        self.background.draw(ctx, &self.assets);
         let mut title_pos = self.text.dead_text.center(ctx);
         title_pos[1] *= 0.5;
         self.text.press_enter.draw_center(ctx);
@@ -569,7 +637,7 @@ impl MainState {
     }
     fn draw_playing(&mut self, ctx: &mut Context) {
         //Draw the background
-       self.background.draw(ctx, &self.assets);      
+        self.background.draw(ctx, &self.assets);
 
         // if we have a target, draw the crosshair
         match self.target {
@@ -612,7 +680,7 @@ impl MainState {
         }
     }
     fn draw_dying(&mut self, ctx: &mut Context) {
-        self.background.draw(ctx, &self.assets);      
+        self.background.draw(ctx, &self.assets);
         for alien in &mut self.aliens {
             alien.draw(ctx, &mut self.assets);
         }
@@ -630,12 +698,17 @@ impl event::EventHandler for MainState {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
         self.dt = timer::delta(ctx);
         match &self.state {
-            GameState::StartMenu => self.update_start_menu(ctx),
+            GameState::DifficultySelect => self.update_difficulty_select(ctx),
+            GameState::LevelSelect => self.update_level_select(ctx),
             GameState::Playing => self.update_playing(ctx),
             GameState::Dying => self.update_dying(ctx),
             GameState::Dead => self.update_dead(ctx),
             GameState::Won => self.update_won(ctx),
             GameState::LevelComplete => self.update_level_complete(ctx),
+        }
+        match self.up_key {
+            Some(_) => self.up_key = None,
+            _ => (),
         }
         Ok(())
     }
@@ -643,7 +716,8 @@ impl event::EventHandler for MainState {
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         graphics::clear(ctx, [0.0, 0.0, 0.0, 1.0].into());
         match &self.state {
-            GameState::StartMenu => self.draw_start_menu(ctx),
+            GameState::DifficultySelect => self.draw_difficulty_select(ctx),
+            GameState::LevelSelect => self.draw_level_select(ctx),
             GameState::Playing => self.draw_playing(ctx),
             GameState::Dying => self.draw_dying(ctx),
             GameState::Dead => self.draw_dead(ctx),
@@ -665,7 +739,7 @@ impl event::EventHandler for MainState {
             println!("text input:{}", ch);
             self.turret.raw_text += &ch.to_string();
             self.turret.text =
-                graphics::Text::new((self.turret.raw_text.clone(), self.assets.main_font, 24.0));
+                graphics::Text::new((self.turret.raw_text.clone(), self.assets.number_font, 24.0));
         }
     }
     fn key_up_event(&mut self, _ctx: &mut Context, keycode: KeyCode, _keymod: KeyMods) {
@@ -687,12 +761,12 @@ pub fn main() -> GameResult {
         .add_resource_path(resource_dir)
         .window_mode(
             conf::WindowMode::default()
-                .fullscreen_type(conf::FullscreenType::True)
+                .fullscreen_type(conf::FullscreenType::Windowed)
                 .resizable(true),
         );
 
     let (ctx, event_loop) = &mut cb.build()?;
-    let state = &mut MainState::new(ctx)?;    
+    let state = &mut MainState::new(ctx)?;
     state.assets.music.set_repeat(true);
     //state.assets.music.set_volume(0.07);
     let _ = state.assets.music.play_detached();

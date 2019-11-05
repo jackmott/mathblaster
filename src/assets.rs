@@ -31,16 +31,15 @@ impl Assets {
             div_ship: graphics::Image::new(ctx, "/div-ship.png").unwrap(),
             title_font: graphics::Font::new(ctx, "/title.ttf").unwrap(),
             main_font: graphics::Font::new(ctx, "/main.ttf").unwrap(),
-            number_font: graphics::Font::new(ctx,"/number.ttf").unwrap(),
+            number_font: graphics::Font::new(ctx, "/number.ttf").unwrap(),
             turret: graphics::Image::new(ctx, "/turret.png").unwrap(),
             background: graphics::Image::new(ctx, start_bg).unwrap(),
             stars1: graphics::Image::new(ctx, "/stars1.png").unwrap(),
             stars2: graphics::Image::new(ctx, "/stars2.png").unwrap(),
             explosion: graphics::Image::new(ctx, "/explosion.png").unwrap(),
             explosion_sound: audio::Source::new(ctx, "/explosion.wav").unwrap(),
-            clap_sound: audio::Source::new(ctx,"/clap.wav").unwrap(),
+            clap_sound: audio::Source::new(ctx, "/clap.wav").unwrap(),
             music: audio::Source::new(ctx, "/music.mp3").unwrap(),
         }
     }
 }
-
