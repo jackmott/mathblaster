@@ -18,6 +18,9 @@ pub struct Assets {
     pub explosion: graphics::Image,
     pub explosion_sound: audio::Source,
     pub clap_sound: audio::Source,
+    pub launch_sound: audio::Source,
+    pub fail_sound: audio::Source,
+    pub laser_sound: audio::Source,
     pub music: audio::Source,
 }
 
@@ -39,6 +42,9 @@ impl Assets {
             explosion: graphics::Image::new(ctx, "/explosion.png").unwrap(),
             explosion_sound: audio::Source::new(ctx, "/explosion.wav").unwrap(),
             clap_sound: audio::Source::new(ctx, "/clap.wav").unwrap(),
+            launch_sound: audio::Source::new(ctx, "/launch.wav").unwrap(),
+            fail_sound: audio::Source::new(ctx, "/fail.ogg").unwrap(),
+            laser_sound: audio::Source::new(ctx, "/laser.ogg").unwrap(),
             music: audio::Source::new(ctx, "/music.mp3").unwrap(),
         }
     }

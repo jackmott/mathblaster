@@ -85,6 +85,11 @@ impl MBText {
         self.draw(pos, ctx);
     }
 
+    pub fn draw_horizontal_center(&self, y: f32, ctx: &mut Context) {
+        let center = self.center(ctx);
+        self.draw(na::Point2::new(center[0], y), ctx);
+    }
+
     pub fn center(&self, ctx: &mut Context) -> na::Point2<f32> {
         let window_dim = graphics::size(ctx);
         let text_dim = self.dest_pixel_dimensions(window_dim);

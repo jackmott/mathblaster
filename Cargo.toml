@@ -1,6 +1,6 @@
 [package]
 
-name = "math_blaster"
+name = "mathdefense"
 version = "0.0.1"
 authors = [ "Jack" ]
 include = ["assets/*"]

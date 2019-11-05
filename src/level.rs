@@ -21,7 +21,7 @@ pub struct Level {
     pub waves: Vec<Wave>,
     pub background_file: String,
     pub title: String,
-    pub unlocked: [bool;4],
+    pub unlocked: [bool; 4],
 }
 
 #[derive(Deserialize, Serialize)]
@@ -38,7 +38,7 @@ pub struct WaveGroup {
     pub min_number: i32,
 }
 
-pub const DIFFICULTY_NAMES: [&str;4] = ["Rookie","Cadet","Veteran","Space Marine"];
+pub const DIFFICULTY_NAMES: [&str; 4] = ["Rookie", "Cadet", "Veteran", "Space Marine"];
 pub const SPEED_DIFFICULTY: [f32; 4] = [1.0, 1.1, 1.25, 1.5];
 pub const MAX_NUMBER_DIFFICULTY: [f32; 4] = [1.0, 1.25, 2.0, 3.0];
 pub const MIN_NUMBER_DIFFICULTY: [f32; 4] = [1.0, 1.25, 2.0, 3.0];
@@ -86,7 +86,7 @@ impl Level {
         vec![
             //Level 1
             Level {
-                unlocked: [true,true,true,true],
+                unlocked: [true, true, true, true],
                 title: "Addition Attack!".to_string(),
                 background_file: "/spacebg1.jpg".to_string(),
                 waves: vec![
@@ -121,7 +121,7 @@ impl Level {
             },
             //Level 2
             Level {
-                unlocked: [false,false,false,false],
+                unlocked: [false, false, false, false],
                 title: "Subtraction Subterfuge!".to_string(),
                 background_file: "/spacebg2.jpg".to_string(),
                 waves: vec![
@@ -156,7 +156,7 @@ impl Level {
             },
             //Level 3
             Level {
-                unlocked: [false,false,false,false],
+                unlocked: [false, false, false, false],
                 title: "Multiplication Mayhem!".to_string(),
                 background_file: "/spacebg3.jpg".to_string(),
                 waves: vec![
@@ -191,7 +191,7 @@ impl Level {
             },
             //Level 4
             Level {
-                unlocked: [false,false,false,false],
+                unlocked: [false, false, false, false],
                 title: "Division Disaster!".to_string(),
                 background_file: "/spacebg4.jpg".to_string(),
                 waves: vec![
@@ -226,7 +226,7 @@ impl Level {
             },
             //Level 5
             Level {
-                unlocked: [false,false,false,false],
+                unlocked: [false, false, false, false],
                 title: "The Final Assault!".to_string(),
                 background_file: "/spacebg5.jpg".to_string(),
                 waves: vec![

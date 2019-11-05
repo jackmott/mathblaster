@@ -13,11 +13,16 @@ pub struct Background {
 }
 
 impl Background {
-    pub fn update(&mut self, dt: std::time::Duration) {
+    pub fn update(&mut self, dt: std::time::Duration, multiplier: f32) {
         //update the parallax stars are different rates
         let t = dt.as_millis() as f32;
-        self.stars1_pos = (self.stars1_pos + t / 60_000.0) % 1.0;
-        self.stars2_pos = (self.stars2_pos + t / 16_000.0) % 1.0;
+        self.stars1_pos = ((self.stars1_pos + t / 60_000.0) * multiplier) % 1.0;
+        self.stars2_pos = ((self.stars2_pos + t / 16_000.0) * multiplier) % 1.0;
+    }
+
+    pub fn draw_no_stars(&mut self, ctx: &mut Context, assets: &Assets) {
+        let background_param = graphics::DrawParam::new().scale(self.scale(graphics::size(ctx)));
+        let _ = graphics::draw(ctx, &assets.background, background_param);
     }
 
     pub fn draw(&mut self, ctx: &mut Context, assets: &Assets) {
