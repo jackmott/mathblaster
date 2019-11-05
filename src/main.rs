@@ -1,7 +1,5 @@
 // todo - transition effect when moving to next level?
-// todo - transition screen after losing a life?
 // todo - fix font and display on turret numbers
-// todo - easy/norma/hard/nightmare modes
 
 use ggez;
 use ggez::audio::SoundSource;
