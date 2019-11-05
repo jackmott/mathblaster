@@ -39,7 +39,7 @@ pub struct WaveGroup {
 }
 
 pub const DIFFICULTY_NAMES: [&str;4] = ["Rookie","Cadet","Veteran","Space Marine"];
-pub const SPEED_DIFFICULTY: [f32; 4] = [1.0, 1.25, 1.5, 2.0];
+pub const SPEED_DIFFICULTY: [f32; 4] = [1.0, 1.1, 1.25, 1.5];
 pub const MAX_NUMBER_DIFFICULTY: [f32; 4] = [1.0, 1.25, 2.0, 3.0];
 pub const MIN_NUMBER_DIFFICULTY: [f32; 4] = [1.0, 1.25, 2.0, 3.0];
 pub const NUM_SHIPS_DIFFICULTY: [f32; 4] = [1.0, 1.25, 2.0, 3.0];
@@ -255,21 +255,21 @@ impl Level {
                                 max_number: 5,
                                 min_number: 0,
                                 operation: Operation::Add,
-                                num_ships: 5,
+                                num_ships: 3,
                             },
                             WaveGroup {
                                 speed: 2.5,
                                 max_number: 5,
                                 min_number: 0,
                                 operation: Operation::Subtract,
-                                num_ships: 5,
+                                num_ships: 3,
                             },
                             WaveGroup {
                                 speed: 2.5,
                                 max_number: 5,
                                 min_number: 0,
                                 operation: Operation::Multiply,
-                                num_ships: 5,
+                                num_ships: 3,
                             },
                         ],
                     },
@@ -280,28 +280,28 @@ impl Level {
                                 max_number: 5,
                                 min_number: 0,
                                 operation: Operation::Add,
-                                num_ships: 5,
+                                num_ships: 3,
                             },
                             WaveGroup {
                                 speed: 3.5,
                                 max_number: 5,
                                 min_number: 0,
                                 operation: Operation::Subtract,
-                                num_ships: 5,
+                                num_ships: 3,
                             },
                             WaveGroup {
                                 speed: 2.5,
                                 max_number: 5,
                                 min_number: 0,
                                 operation: Operation::Multiply,
-                                num_ships: 5,
+                                num_ships: 3,
                             },
                             WaveGroup {
                                 speed: 1.5,
                                 max_number: 6,
                                 min_number: 0,
                                 operation: Operation::Divide,
-                                num_ships: 5,
+                                num_ships: 3,
                             },
                         ],
                     },
