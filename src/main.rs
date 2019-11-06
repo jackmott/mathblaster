@@ -2,7 +2,7 @@
 
 use ggez;
 use ggez::audio::SoundSource;
-use ggez::conf::{self, NumSamples};
+use ggez::conf::{self};
 use ggez::event::{self, KeyCode, KeyMods};
 use ggez::graphics::{self, Color};
 
@@ -880,8 +880,7 @@ pub fn main() -> GameResult {
         .add_resource_path(resource_dir)
         .window_setup(
             conf::WindowSetup::default()
-                .title("Math Defense")
-                .samples(NumSamples::Four),
+                .title("Math Defense")                
         )
         .window_mode(
             conf::WindowMode::default()
