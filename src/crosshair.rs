@@ -37,7 +37,7 @@ impl Scalable for Crosshair {
         na::Point2::new(0.0, 0.0)
     }
     fn pct_dimensions(&self) -> (f32, f32) {
-        (0.065, 0.1)
+        (0.090, 0.125)
     }
     fn src_pixel_dimensions(&self) -> (f32, f32) {
         (self.src_pixel_width, self.src_pixel_height)
