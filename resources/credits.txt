@@ -1,0 +1,13 @@
+All assets sourced from opengameart.org
+
+Background art by Rawdanitsu
+Spaceships by http://millionthvector.blogspot.com/
+Explosion graphics by Cuzco
+Music by Telaron
+Sound effects by bart, Skorpio, and TinyWorlds, Blender Foundation, and LeeZh
+
+Programming / Design - Jack Mott
+
+Testing: Theo and Ada Mott
+
+Special thanks to the Mozilla Foundation for Rust, and to icefoxen for ggez
