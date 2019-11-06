@@ -18,7 +18,6 @@ impl Message {
             elapsed: 0.0,
         }
     }
-
     pub fn update(&mut self, dt: std::time::Duration) {
         self.elapsed += dt.as_millis() as f32;
     }

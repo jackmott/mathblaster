@@ -22,8 +22,9 @@ pub struct Turret {
     pub state: TurretState,
     pub src_pixel_width: f32,
     pub src_pixel_height: f32,
-    pub pos: na::Point2<f32>,
+    pub pos: na::Point2<f32>,    
 }
+
 impl Scalable for Turret {
     fn pct_pos(&self) -> na::Point2<f32> {
         self.pos
