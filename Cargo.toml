@@ -3,13 +3,11 @@
 name = "mathdefense"
 version = "0.0.1"
 authors = [ "Jack" ]
-include = ["assets/*"]
 edition="2018"
 
 [dependencies]
 ggez = "*"
 rand = "*"
-structopt = "*"
 nalgebra = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
