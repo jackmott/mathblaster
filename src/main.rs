@@ -319,6 +319,9 @@ impl MainState {
         }
     }
     fn update_difficulty_select(&mut self, _ctx: &mut Context) {
+        for difficulty in &mut self.text.difficulty_names {
+            difficulty.update(self.dt);
+        }
         if let Some(keycode) = self.up_key {
             if keycode == KeyCode::Return {
                 self.state = GameState::LevelSelect;
@@ -374,12 +377,10 @@ impl MainState {
                 };
             }
         }
-
         for level_name in &mut self.text.level_names {
             level_name.update(self.dt)
         }
     }
-
     fn update_won(&mut self, _ctx: &mut Context) {
         if let Some(keycode) = self.up_key {
             if keycode == KeyCode::Return {
@@ -387,7 +388,6 @@ impl MainState {
             }
         }
     }
-
     fn update_level_complete(&mut self, ctx: &mut Context) {
         self.turret.rotation = 0.0;
         self.background.update(self.dt, 1.0);
@@ -405,7 +405,6 @@ impl MainState {
             }
         }
     }
-
     fn update_level_transition(&mut self, ctx: &mut Context, elapsed: f32) {
         self.state = GameState::LevelTransition(elapsed + self.dt.as_millis() as f32);
         let pct = elapsed / 3000.0;
@@ -540,8 +539,7 @@ impl MainState {
                     }
                     _ => (),
                 }
-            } else if keycode == KeyCode::Right {
-                println!("left");
+            } else if keycode == KeyCode::Right {                
                 match self.target {
                     Some(index) => {
                         if self
@@ -603,8 +601,7 @@ impl MainState {
             .max_by_key(|alien| (alien.pos[1] * 1000.0) as i32)
         {
             Some(alien) => {
-                if alien.pos[1] > 0.9 {
-                    println!("seting state to dead");
+                if alien.pos[1] > 0.9 {                    
                     self.state = GameState::Dying
                 };
             }
@@ -827,6 +824,7 @@ impl event::EventHandler for MainState {
         graphics::present(ctx)?;
         Ok(())
     }
+    
     fn resize_event(&mut self, ctx: &mut Context, width: f32, height: f32) {
         let new_rect = graphics::Rect::new(0.0, 0.0, width as f32, height as f32);
         graphics::set_screen_coordinates(ctx, new_rect).unwrap();
