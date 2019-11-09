@@ -41,7 +41,7 @@ impl Assets {
             stars2: graphics::Image::new(ctx, "/stars2.png").unwrap(),
             explosion: graphics::Image::new(ctx, "/explosion.png").unwrap(),
             explosion_sound: audio::Source::new(ctx, "/explosion.wav").unwrap(),
-            clap_sound: audio::Source::new(ctx, "/clap.wav").unwrap(),
+            clap_sound: audio::Source::new(ctx, "/clap.ogg").unwrap(),
             launch_sound: audio::Source::new(ctx, "/launch.wav").unwrap(),
             fail_sound: audio::Source::new(ctx, "/fail.ogg").unwrap(),
             laser_sound: audio::Source::new(ctx, "/laser.ogg").unwrap(),
