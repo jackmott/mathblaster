@@ -182,6 +182,7 @@ struct MainState {
 impl MainState {
     fn new(ctx: &mut Context) -> GameResult<MainState> {
         let levels = Level::load_from_file();
+        println!("levels count:{}",levels.len());
         let assets = Assets::new(ctx, levels[0].background_file.clone());
         let messages = VecDeque::new();
         let aliens = Vec::new();
@@ -198,7 +199,7 @@ impl MainState {
                     128.0,
                     ctx,
                 ),
-                won_text: MBText::new("You  Win!".to_string(), &assets.main_font, BLUE, 128.0, ctx),
+                won_text: MBText::new("You Have Saved The Galaxy!".to_string(), &assets.main_font, BLUE, 128.0, ctx),
                 press_enter: MBText::new(
                     "Press Enter".to_string(),
                     &assets.main_font,
@@ -291,13 +292,14 @@ impl MainState {
     }
     fn increment_level_wave(&mut self, ctx: &mut Context) {
         //if we were at the last wave already then go to next level
-        if self.current_wave + 1 >= self.levels[self.current_level].waves.len() {
-            //unlock the next level and save the json
-            self.levels[self.current_level + 1].unlocked[self.difficulty_selection] = true;
-            Level::save_levels(&self.levels);
+        if self.current_wave + 1 >= self.levels[self.current_level].waves.len() {            
             if self.current_level + 1 >= self.levels.len() {
                 self.state = GameState::Won;
+                let _ = self.assets.clap_sound.play_detached();
             } else {
+                //unlock the next level and save the json
+                self.levels[self.current_level + 1].unlocked[self.difficulty_selection] = true;
+                Level::save_levels(&self.levels);
                 self.set_level_wave(self.current_level + 1, 0)
             }
         } else {
@@ -381,7 +383,7 @@ impl MainState {
     fn update_won(&mut self, _ctx: &mut Context) {
         if let Some(keycode) = self.up_key {
             if keycode == KeyCode::Return {
-                self.state = GameState::LevelSelect;
+                self.state = GameState::DifficultySelect;
             }
         }
     }

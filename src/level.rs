@@ -69,16 +69,23 @@ impl Level {
                 // If we get an error, load the default and save a new levels.json file
                 println!("Error loading level file.\nUsing default\n{}", msg);
                 let levels = Level::new();
-                Level::save_levels(&levels);
+                Level::save_levels(&levels);                    
                 levels
             }
         }
     }
 
     pub fn save_levels(levels: &Vec<Level>) {
-        let serialized = serde_json::to_string_pretty(&levels).unwrap(); // TODO do we want to handle this gracefully too?
-        let mut file = File::create("resources/levels.json").unwrap();;
-        file.write_all(serialized.as_bytes()).unwrap();
+        fn save_helper(levels: &Vec<Level>) -> Result<(),String> {            
+            let serialized = serde_json::to_string_pretty(&levels).map_err(|_| "couldn't serialize levels")?; 
+            let mut file = File::create("resources/levels.json").map_err(|_| "couldn't create save file for levels")?;
+            file.write_all(serialized.as_bytes()).map_err(|_| "couldn't wire to save file")?;
+            Ok(())
+        }
+        match save_helper(&levels) {
+            Err(msg) => println!("{}",msg),
+            Ok(_) => ()
+        }
     }
 
     // consider validating max_number to be sure it makes sense
