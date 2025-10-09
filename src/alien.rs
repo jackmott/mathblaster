@@ -1,12 +1,13 @@
-use ggez::graphics::{self, Color, DrawParam};
-use ggez::nalgebra as na;
+extern crate nalgebra as na;
+
+use ggez::graphics::{self, Drawable};
+use ggez::Context;
 
 use crate::assets::*;
 use crate::explosion::*;
 use crate::ggez_utility::*;
 use crate::level::*;
 use crate::turret::*;
-use ggez::Context;
 
 #[derive(PartialEq)]
 pub enum AlienState {
@@ -55,13 +56,13 @@ impl Alien {
         }
     }
 
-    pub fn draw(&mut self, ctx: &mut Context, assets: &mut Assets) {
+    pub fn draw(&mut self, ctx: &mut Context, assets: &mut Assets, canvas: &mut graphics::Canvas) {
         if self.state != AlienState::Dead {
             if self.explosion.elapsed < self.explosion.duration / 2.0 {
-                let params = DrawParam::new()
-                    .color(Color::from((255, 255, 255, 255)))
-                    .dest(self.pixel_pos(graphics::size(ctx)))
-                    .scale(self.scale(graphics::size(ctx)))
+                let params = graphics::DrawParam::new()
+                    .color(graphics::Color::from((255, 255, 255, 255)))
+                    .dest(self.pixel_pos(ctx.gfx.size()))
+                    .scale(self.scale(ctx.gfx.size()))
                     .offset(na::Point2::new(0.5, 0.5));
                 let img = match self.operation {
                     Operation::Add => &assets.add_ship,
@@ -69,25 +70,25 @@ impl Alien {
                     Operation::Multiply => &assets.mul_ship,
                     Operation::Divide => &assets.div_ship,
                 };
-                let _ = graphics::draw(ctx, img, params);
+                canvas.draw(img, params);
 
-                let tw = self.text.width(ctx) as f32;
-                let (sw, sh) = self.dest_pixel_dimensions(graphics::size(ctx));
+                let tw = self.text.dimensions(ctx).unwrap().w as f32;
+                let (sw, sh) = self.dest_pixel_dimensions(ctx.gfx.size());
                 let offsetx = -sw / 2.0 + (sw - tw) / 2.0;
                 let offsety = -sh / 1.2;
 
                 let offset = na::Vector2::new(offsetx, offsety);
 
-                let text_param = DrawParam::new()
-                    .color(Color::from((255, 255, 255, 255)))
-                    .dest(self.pixel_pos(graphics::size(ctx)) + offset);
-                let _ = graphics::draw(ctx, &self.text, text_param);
+                let text_param = graphics::DrawParam::new()
+                    .color(graphics::Color::from((255, 255, 255, 255)))
+                    .dest(self.pixel_pos(ctx.gfx.size()) + offset);
+                canvas.draw(&self.text, text_param);
             }
         }
 
         if self.state == AlienState::Exploding {
             self.explosion.pos = self.pct_pos();
-            self.explosion.draw(ctx, assets);
+            self.explosion.draw(ctx, assets, canvas);
         }
     }
 }

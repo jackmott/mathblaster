@@ -1,5 +1,6 @@
+extern crate nalgebra as na;
+
 use ggez::graphics::Color;
-use ggez::nalgebra as na;
 
 pub const WHITE: Color = Color {
     r: 1.0,

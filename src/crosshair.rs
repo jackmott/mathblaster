@@ -1,8 +1,9 @@
+extern crate nalgebra as na;
+
+use ggez::{graphics, Context};
+
 use crate::assets::*;
 use crate::ggez_utility::*;
-use ggez::graphics::{self, Color};
-use ggez::nalgebra as na;
-use ggez::Context;
 
 pub struct Crosshair {
     pub elapsed: u32,
@@ -17,7 +18,13 @@ impl Crosshair {
         self.elapsed = (self.elapsed + dt.as_millis() as u32) % CROSSHAIR_TIME;
     }
 
-    pub fn draw(&mut self, pos: na::Point2<f32>, ctx: &mut Context, assets: &Assets) {
+    pub fn draw(
+        &mut self,
+        pos: na::geometry::Point2<f32>,
+        ctx: &mut Context,
+        assets: &Assets,
+        canvas: &mut graphics::Canvas,
+    ) {
         let pct = self.elapsed as f32 / CROSSHAIR_TIME as f32;
         let mut color = (510.0 * pct) as u32;
         if color > 255 {
@@ -25,13 +32,14 @@ impl Crosshair {
         }
 
         let crosshair_params = graphics::DrawParam::new()
-            .color(Color::from((255, color as u8, color as u8, 255)))
+            .color(graphics::Color::from((255, color as u8, color as u8, 255)))
             .dest(pos)
-            .scale(self.scale(graphics::size(ctx)))
+            .scale(self.scale(ctx.gfx.size()))
             .offset(na::Point2::new(0.5, 0.5));
-        let _ = graphics::draw(ctx, &assets.crosshair, crosshair_params);
+        canvas.draw(&assets.crosshair, crosshair_params);
     }
 }
+
 impl Scalable for Crosshair {
     fn pct_pos(&self) -> na::Point2<f32> {
         na::Point2::new(0.0, 0.0)

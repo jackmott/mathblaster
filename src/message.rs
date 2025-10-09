@@ -1,6 +1,5 @@
-use ggez::Context;
+use ggez::{graphics, Context};
 
-use crate::assets::*;
 use crate::ggez_utility::*;
 use crate::mbtext::*;
 
@@ -11,9 +10,9 @@ pub struct Message {
 }
 
 impl Message {
-    pub fn new(text: String, duration: f32, assets: &Assets, ctx: &mut Context) -> Message {
+    pub fn new(text: String, font: &str, duration: f32, ctx: &mut Context) -> Message {
         Message {
-            text: MBText::new(text, &assets.main_font, WHITE, 128.0, ctx),
+            text: MBText::new(text, font, WHITE, 128.0, ctx),
             duration: duration,
             elapsed: 0.0,
         }
@@ -22,8 +21,8 @@ impl Message {
         self.elapsed += dt.as_millis() as f32;
     }
 
-    pub fn draw(&self, ctx: &mut Context) {
+    pub fn draw(&self, ctx: &mut Context, canvas: &mut graphics::Canvas) {
         let text_pos = self.text.center(ctx);
-        self.text.draw(text_pos, ctx);
+        self.text.draw(text_pos, ctx, canvas);
     }
 }

@@ -1,7 +1,7 @@
+extern crate nalgebra as na;
+
 use ggez::audio::SoundSource;
-use ggez::graphics::{self, Color, DrawParam};
-use ggez::nalgebra as na;
-use ggez::Context;
+use ggez::{graphics, Context};
 
 use crate::assets::*;
 
@@ -49,23 +49,23 @@ impl Explosion {
         }
     }
 
-    pub fn draw(&mut self, ctx: &mut Context, assets: &mut Assets) {
+    pub fn draw(&mut self, ctx: &mut Context, assets: &mut Assets, canvas: &mut graphics::Canvas) {
         if self.elapsed >= self.start_time {
             if !self.sound_played {
-                let _ = assets.laser_sound.play_detached();
-                let _ = assets.explosion_sound.play_detached();
+                let _ = assets.laser_sound.play_detached(&ctx.audio);
+                let _ = assets.explosion_sound.play_detached(&ctx.audio);
                 self.sound_played = true;
             }
             if self.elapsed - self.start_time <= self.duration {
-                let screen = graphics::size(ctx);
-                let param = DrawParam::new()
-                    .color(Color::from((255, 255, 255, 255)))
+                let screen = ctx.gfx.size();
+                let param = graphics::DrawParam::new()
+                    .color(graphics::Color::from((255, 255, 255, 255)))
                     .dest(
                         na::Point2::new(self.pos[0] * screen.0, self.pos[1] * screen.1)
                             - na::Vector2::new(32.0, 32.0),
                     )
                     .src(self.get_rect());
-                let _ = graphics::draw(ctx, &assets.explosion, param);
+                canvas.draw(&assets.explosion, param);
             }
         }
     }

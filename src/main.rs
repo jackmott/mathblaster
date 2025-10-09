@@ -1,24 +1,28 @@
 #![windows_subsystem = "windows"]
 
+extern crate nalgebra as na;
+
 use ggez;
 use ggez::audio::SoundSource;
-use ggez::conf::{self};
-use ggez::event::{self, KeyCode, KeyMods};
-use ggez::graphics::{self, Color};
+use ggez::conf;
+use ggez::event;
+use ggez::graphics;
+use ggez::input::keyboard::{KeyCode, KeyInput};
+use ggez::Context;
+use ggez::GameResult;
 
-use ggez::nalgebra as na;
-use ggez::timer;
-use ggez::{Context, GameResult};
-use rand::*;
+use rand::Rng;
 use std::collections::VecDeque;
 use std::env;
 use std::path;
+use std::time::Duration;
 
 mod alien;
 mod assets;
 mod background;
 mod crosshair;
 mod explosion;
+mod fonts;
 mod ggez_utility;
 mod level;
 mod mbtext;
@@ -30,6 +34,7 @@ use crate::assets::*;
 use crate::background::*;
 use crate::crosshair::*;
 use crate::explosion::*;
+use crate::fonts::*;
 use crate::ggez_utility::*;
 use crate::level::*;
 use crate::mbtext::*;
@@ -48,9 +53,9 @@ fn get_lowest_living_alien(aliens: &Vec<Alien>) -> Option<usize> {
     }
 }
 
-fn gen_aliens(wave: &Wave, assets: &Assets, difficulty: usize) -> Vec<Alien> {
+fn gen_aliens(wave: &Wave, assets: &Assets, fonts: &Fonts, difficulty: usize) -> Vec<Alien> {
     let mut aliens: Vec<Alien> = Vec::new();
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     for group in &wave.groups {
         let alien_img = match group.operation {
             Operation::Add => &assets.add_ship,
@@ -69,11 +74,11 @@ fn gen_aliens(wave: &Wave, assets: &Assets, difficulty: usize) -> Vec<Alien> {
                 let mut a;
                 let mut b;
                 loop {
-                    a = rng.gen_range(min_number, max_number);
+                    a = rng.random_range(min_number..max_number);
                     b = if a == group.min_number {
                         a
                     } else {
-                        rng.gen_range(min_number, a)
+                        rng.random_range(min_number..a)
                     };
                     if b == 0 {
                         continue;
@@ -85,8 +90,8 @@ fn gen_aliens(wave: &Wave, assets: &Assets, difficulty: usize) -> Vec<Alien> {
                 (a, b)
             } else {
                 (
-                    rng.gen_range(min_number, max_number),
-                    rng.gen_range(min_number, max_number),
+                    rng.random_range(min_number..max_number),
+                    rng.random_range(min_number..max_number),
                 )
             };
 
@@ -105,26 +110,30 @@ fn gen_aliens(wave: &Wave, assets: &Assets, difficulty: usize) -> Vec<Alien> {
                 Operation::Multiply => (num1 * num2, "X"),
                 Operation::Divide => (num1 / num2, "/"),
             };
-            let text = num1.to_string() + op + &num2.to_string();
+
+            let text = graphics::Text::new(num1.to_string() + op + &num2.to_string())
+                .set_font(&fonts.number)
+                .set_scale(24.)
+                .clone();
 
             // generate an x coordinate for aliens, make
             // sure it isn't too close to aliens at nearby
             // y so they don't overlap
-            let mut x: f32 = rng.gen_range(0.05, 0.95);
+            let mut x: f32 = rng.random_range(0.05..0.95);
             while aliens
                 .iter()
                 .rev()
                 .take(3)
                 .any(|alien| (alien.pos[0] - x).abs() < 0.1)
             {
-                x = rng.gen_range(0.05, 0.95);
+                x = rng.random_range(0.05..0.95);
             }
 
             let alien = Alien {
                 operation: group.operation,
                 speed: group.speed as f32 * SPEED_DIFFICULTY[difficulty],
                 pos: na::Point2::new(x, -(i as i32) as f32 * 0.3),
-                text: graphics::Text::new((text, assets.number_font, 24.0)),
+                text: text,
                 answer: answer,
                 explosion: Explosion::new(0.0, na::Point2::new(0.0, 0.0)),
                 state: AlienState::Alive,
@@ -161,9 +170,10 @@ struct TextState {
 }
 struct MainState {
     messages: VecDeque<Message>,
-    dt: std::time::Duration,
+    dt: Duration,
     aliens: Vec<Alien>,
     assets: Assets,
+    fonts: Fonts,
     levels: Vec<Level>,
     current_level: usize,
     current_wave: usize,
@@ -182,8 +192,9 @@ struct MainState {
 impl MainState {
     fn new(ctx: &mut Context) -> GameResult<MainState> {
         let levels = Level::load_from_file();
-        println!("levels count:{}",levels.len());
+        println!("levels count:{}", levels.len());
         let assets = Assets::new(ctx, levels[0].background_file.clone());
+        let fonts = Fonts::new(ctx);
         let messages = VecDeque::new();
         let aliens = Vec::new();
         let target = get_lowest_living_alien(&aliens);
@@ -194,29 +205,29 @@ impl MainState {
             text: TextState {
                 dead_text: MBText::new(
                     "You  Have  Died".to_string(),
-                    &assets.title_font,
+                    &fonts.title,
                     BLUE,
                     128.0,
                     ctx,
                 ),
-                won_text: MBText::new("You Have Saved The Galaxy!".to_string(), &assets.main_font, BLUE, 128.0, ctx),
-                press_enter: MBText::new(
-                    "Press Enter".to_string(),
-                    &assets.main_font,
-                    WHITE,
-                    64.0,
+                won_text: MBText::new(
+                    "You Have Saved The Galaxy!".to_string(),
+                    &fonts.main,
+                    BLUE,
+                    128.0,
                     ctx,
                 ),
+                press_enter: MBText::new("Press Enter".to_string(), &fonts.main, WHITE, 64.0, ctx),
                 math_title: MBText::new(
                     "Math  Defense".to_string(),
-                    &assets.title_font,
+                    &fonts.title,
                     BLUE,
                     128.0,
                     ctx,
                 ),
                 level_complete: MBText::new(
                     "Level  Complete!".to_string(),
-                    &assets.title_font,
+                    &fonts.title,
                     BLUE,
                     128.0,
                     ctx,
@@ -224,31 +235,17 @@ impl MainState {
                 level_names: levels
                     .iter()
                     .map(|level| {
-                        MBText::new_blink(
-                            level.title.clone(),
-                            &assets.main_font,
-                            WHITE,
-                            GRAY,
-                            64.0,
-                            ctx,
-                        )
+                        MBText::new_blink(level.title.clone(), &fonts.main, WHITE, GRAY, 64.0, ctx)
                     })
                     .collect(),
                 difficulty_names: DIFFICULTY_NAMES
                     .iter()
                     .map(|name| {
-                        MBText::new_blink(
-                            name.to_string(),
-                            &assets.main_font,
-                            WHITE,
-                            GRAY,
-                            64.0,
-                            ctx,
-                        )
+                        MBText::new_blink(name.to_string(), &fonts.main, WHITE, GRAY, 64.0, ctx)
                     })
                     .collect(),
             },
-            turret: Turret::new(&assets, ctx),
+            turret: Turret::new(&assets, &fonts.number, ctx),
             levels: levels,
             current_level: 0,
             current_wave: 0,
@@ -260,7 +257,7 @@ impl MainState {
                 stars2_pos: 0.0,
             },
             state: GameState::DifficultySelect,
-            dt: std::time::Duration::new(0, 0),
+            dt: Duration::new(0, 0),
             lives: 2,
             crosshair: Crosshair {
                 elapsed: 0,
@@ -268,6 +265,7 @@ impl MainState {
                 src_pixel_height: assets.crosshair.height() as f32,
             },
             assets: assets,
+            fonts: fonts,
             level_selection: 0,
             difficulty_selection: 0,
             up_key: None,
@@ -279,41 +277,42 @@ impl MainState {
         self.current_wave = wave;
         self.target = None;
         let wave = &self.levels[self.current_level].waves[self.current_wave];
-        self.aliens = gen_aliens(wave, &self.assets, self.difficulty_selection);
+        self.aliens = gen_aliens(wave, &self.assets, &self.fonts, self.difficulty_selection);
         self.target = get_lowest_living_alien(&self.aliens);
     }
 
-    fn set_level_wave(&mut self, level: usize, wave: usize) {
+    fn set_level_wave(&mut self, ctx: &mut Context, level: usize, wave: usize) {
         if level > self.current_level {
             self.state = GameState::LevelComplete;
-            let _ = self.assets.clap_sound.play_detached();
+            let _ = self.assets.clap_sound.play_detached(&ctx.audio);
         }
         self.load_level_wave(level, wave);
     }
+
     fn increment_level_wave(&mut self, ctx: &mut Context) {
         //if we were at the last wave already then go to next level
-        if self.current_wave + 1 >= self.levels[self.current_level].waves.len() {            
+        if self.current_wave + 1 >= self.levels[self.current_level].waves.len() {
             if self.current_level + 1 >= self.levels.len() {
                 self.state = GameState::Won;
-                let _ = self.assets.clap_sound.play_detached();
+                let _ = self.assets.clap_sound.play_detached(&ctx.audio);
             } else {
                 //unlock the next level and save the json
                 self.levels[self.current_level + 1].unlocked[self.difficulty_selection] = true;
                 Level::save_levels(&self.levels);
-                self.set_level_wave(self.current_level + 1, 0)
+                self.set_level_wave(ctx, self.current_level + 1, 0)
             }
         } else {
-            self.set_level_wave(self.current_level, self.current_wave + 1);
+            self.set_level_wave(ctx, self.current_level, self.current_wave + 1);
             self.messages.push_back(Message::new(
                 "Wave Eliminated!".to_string(),
+                &self.fonts.main,
                 2000.0,
-                &self.assets,
                 ctx,
             ));
             self.messages.push_back(Message::new(
                 "Wave ".to_string() + &(self.current_wave + 1).to_string(),
+                &self.fonts.main,
                 2000.0,
-                &self.assets,
                 ctx,
             ));
         }
@@ -347,25 +346,25 @@ impl MainState {
         if let Some(keycode) = self.up_key {
             if keycode == KeyCode::Return {
                 self.load_level_wave(self.level_selection, 0);
-                self.assets.background = graphics::Image::new(
+                self.assets.background = graphics::Image::from_path(
                     ctx,
                     self.levels[self.current_level].background_file.clone(),
                 )
                 .unwrap();
                 self.messages.push_back(Message::new(
                     self.levels[self.level_selection].title.clone(),
+                    &self.fonts.main,
                     2000.0,
-                    &self.assets,
                     ctx,
                 ));
                 self.messages.push_back(Message::new(
                     "Wave 1".to_string(),
+                    &self.fonts.main,
                     2000.0,
-                    &self.assets,
                     ctx,
                 ));
                 self.lives = 2;
-                self.turret = Turret::new(&self.assets, ctx);
+                self.turret = Turret::new(&self.assets, &self.fonts.number, ctx);
                 self.state = GameState::Playing;
             } else if keycode == KeyCode::Down {
                 self.level_selection = (self.level_selection + 1) % unlocked_count;
@@ -393,13 +392,17 @@ impl MainState {
         self.background.update(self.dt, 1.0);
         if let Some(keycode) = self.up_key {
             if keycode == KeyCode::Return {
-                let _ = self.assets.launch_sound.play_detached();
+                let _ = self.assets.launch_sound.play_detached(&ctx.audio);
                 self.state = GameState::LevelTransition(0.0);
-                self.levels[self.current_level].push_title(&mut self.messages, &self.assets, ctx);
+                self.levels[self.current_level].push_title(
+                    &mut self.messages,
+                    &self.fonts.main,
+                    ctx,
+                );
                 self.messages.push_back(Message::new(
                     "WARP SPEED".to_string(),
+                    &self.fonts.main,
                     2000.0,
-                    &self.assets,
                     ctx,
                 ));
             }
@@ -413,16 +416,18 @@ impl MainState {
 
         if elapsed >= 3000.0 {
             self.state = GameState::Playing;
-            self.levels[self.current_level].push_title(&mut self.messages, &self.assets, ctx);
+            self.levels[self.current_level].push_title(&mut self.messages, &self.fonts.main, ctx);
             self.messages.push_back(Message::new(
                 "Wave 1".to_string(),
+                &self.fonts.main,
                 2000.0,
-                &self.assets,
                 ctx,
             ));
-            self.assets.background =
-                graphics::Image::new(ctx, self.levels[self.current_level].background_file.clone())
-                    .unwrap();
+            self.assets.background = graphics::Image::from_path(
+                ctx,
+                self.levels[self.current_level].background_file.clone(),
+            )
+            .unwrap();
             self.turret.pos = na::Point2::new(0.5, 0.9); //put turret back at the bottom
         }
     }
@@ -451,28 +456,28 @@ impl MainState {
         {
             if self.lives > 0 {
                 self.lives -= 1;
-                self.turret = Turret::new(&self.assets, ctx);
-                self.set_level_wave(self.current_level, self.current_wave);
+                self.turret = Turret::new(&self.assets, &self.fonts.number, ctx);
+                self.set_level_wave(ctx, self.current_level, self.current_wave);
                 self.state = GameState::Playing;
                 if self.lives > 0 {
                     self.messages.push_back(Message::new(
                         self.lives.to_string() + &" Gun Left".to_string(),
+                        &self.fonts.main,
                         2000.0,
-                        &self.assets,
                         ctx,
                     ));
                 } else {
                     self.messages.push_back(Message::new(
                         "Final Gun! Good Luck!".to_string(),
+                        &self.fonts.main,
                         2000.0,
-                        &self.assets,
                         ctx,
                     ));
                 }
                 self.messages.push_back(Message::new(
                     "Restarting Wave ".to_string() + &(self.current_wave + 1).to_string(),
+                    &self.fonts.main,
                     2000.0,
-                    &self.assets,
                     ctx,
                 ));
             } else {
@@ -490,11 +495,11 @@ impl MainState {
                     Ok(n) => match self.target {
                         Some(alien_index) if self.aliens[alien_index].answer == n => {
                             self.aliens[alien_index].state = AlienState::Exploding;
-                            let _ = self.assets.explosion_sound.play_detached();
+                            let _ = self.assets.explosion_sound.play_detached(&ctx.audio);
                             self.turret.state = TurretState::Firing;
                         }
                         _ => {
-                            let _ = self.assets.fail_sound.play_detached();
+                            let _ = self.assets.fail_sound.play_detached(&ctx.audio);
                         }
                     },
                     Err(_) => (),
@@ -502,7 +507,7 @@ impl MainState {
                 self.turret.raw_text = "".to_string();
                 self.turret.text = MBText::new(
                     self.turret.raw_text.clone(),
-                    &self.assets.number_font,
+                    &self.fonts.number,
                     WHITE,
                     24.0,
                     ctx,
@@ -511,7 +516,7 @@ impl MainState {
                 let _ = self.turret.raw_text.pop();
                 self.turret.text = MBText::new(
                     self.turret.raw_text.clone(),
-                    &self.assets.number_font,
+                    &self.fonts.number,
                     WHITE,
                     24.0,
                     ctx,
@@ -539,7 +544,7 @@ impl MainState {
                     }
                     _ => (),
                 }
-            } else if keycode == KeyCode::Right {                
+            } else if keycode == KeyCode::Right {
                 match self.target {
                     Some(index) => {
                         if self
@@ -601,7 +606,7 @@ impl MainState {
             .max_by_key(|alien| (alien.pos[1] * 1000.0) as i32)
         {
             Some(alien) => {
-                if alien.pos[1] > 0.9 {                    
+                if alien.pos[1] > 0.9 {
                     self.state = GameState::Dying
                 };
             }
@@ -617,13 +622,13 @@ impl MainState {
             self.increment_level_wave(ctx);
         }
     }
-    fn draw_difficulty_select(&mut self, ctx: &mut Context) {
-        self.background.draw_no_stars(ctx, &self.assets);
+    fn draw_difficulty_select(&mut self, ctx: &mut Context, canvas: &mut graphics::Canvas) {
+        self.background.draw_no_stars(ctx, &self.assets, canvas);
         let mut title_pos = self.text.math_title.center(ctx);
         title_pos[1] *= 0.5;
-        self.text.math_title.draw(title_pos, ctx);
+        self.text.math_title.draw(title_pos, ctx, canvas);
 
-        let window_dimension = graphics::size(ctx);
+        let window_dimension = ctx.gfx.size();
         let mut y = 0.4 * window_dimension.1 as f32;
 
         for (i, difficulty_name) in self.text.difficulty_names.iter().enumerate() {
@@ -631,81 +636,88 @@ impl MainState {
             let mut center = difficulty_name.center(ctx);
             center[1] = y;
             if i == self.difficulty_selection {
-                difficulty_name.draw(center, ctx);
+                difficulty_name.draw(center, ctx, canvas);
             } else {
-                difficulty_name.draw_color(center, GRAY, ctx);
+                difficulty_name.draw_color(center, GRAY, ctx, canvas);
             }
             y += vertical_size * 1.075;
         }
     }
 
-    fn draw_level_select(&mut self, ctx: &mut Context) {
-        self.background.draw_no_stars(ctx, &self.assets);
+    fn draw_level_select(&mut self, ctx: &mut Context, canvas: &mut graphics::Canvas) {
+        self.background.draw_no_stars(ctx, &self.assets, canvas);
         let mut title_pos = self.text.math_title.center(ctx);
         title_pos[1] *= 0.5;
-        self.text.math_title.draw(title_pos, ctx);
+        self.text.math_title.draw(title_pos, ctx, canvas);
 
-        let window_dimension = graphics::size(ctx);
+        let window_dimension = ctx.gfx.size();
         let mut y = 0.4 * window_dimension.1 as f32;
         for (i, level_name) in self.text.level_names.iter().enumerate() {
             let vertical_size = level_name.dest_pixel_dimensions(window_dimension).1;
             let mut center = level_name.center(ctx);
             center[1] = y;
             if i == self.level_selection {
-                level_name.draw(center, ctx);
+                level_name.draw(center, ctx, canvas);
             } else if self.levels[i].unlocked[self.difficulty_selection] {
-                level_name.draw_color(center, GRAY, ctx);
+                level_name.draw_color(center, GRAY, ctx, canvas);
             } else {
-                level_name.draw_color(center, DARK_GRAY, ctx);
+                level_name.draw_color(center, DARK_GRAY, ctx, canvas);
             }
             y += vertical_size * 1.075;
         }
     }
-    fn draw_won(&mut self, ctx: &mut Context) {
-        self.background.draw(ctx, &self.assets);
+    fn draw_won(&mut self, ctx: &mut Context, canvas: &mut graphics::Canvas) {
+        self.background.draw(ctx, &self.assets, canvas);
         let mut title_pos = self.text.won_text.center(ctx);
         title_pos[1] *= 0.5;
-        self.text.press_enter.draw_center(ctx);
-        self.text.won_text.draw(title_pos, ctx);
+        self.text.press_enter.draw_center(ctx, canvas);
+        self.text.won_text.draw(title_pos, ctx, canvas);
     }
 
-    fn draw_level_complete(&mut self, ctx: &mut Context) {
-        self.background.draw(ctx, &self.assets);
+    fn draw_level_complete(&mut self, ctx: &mut Context, canvas: &mut graphics::Canvas) {
+        self.background.draw(ctx, &self.assets, canvas);
         let mut title_pos = self.text.level_complete.center(ctx);
         title_pos[1] *= 0.5;
-        self.text.press_enter.draw_center(ctx);
-        self.text.level_complete.draw(title_pos, ctx);
-        self.turret.draw(ctx, &mut self.assets);
-        self.turret.draw_lives(self.lives, ctx, &mut self.assets);
+        self.text.press_enter.draw_center(ctx, canvas);
+        self.text.level_complete.draw(title_pos, ctx, canvas);
+        self.turret.draw(ctx, &mut self.assets, canvas);
+        self.turret
+            .draw_lives(self.lives, ctx, &mut self.assets, canvas);
     }
 
-    fn draw_level_transition(&mut self, ctx: &mut Context, elapsed: f32) {
-        self.background.draw(ctx, &self.assets);
+    fn draw_level_transition(
+        &mut self,
+        ctx: &mut Context,
+        _elapsed: f32,
+        canvas: &mut graphics::Canvas,
+    ) {
+        self.background.draw(ctx, &self.assets, canvas);
         let mut title_pos = self.text.level_complete.center(ctx);
         title_pos[1] *= 0.5;
-        self.text.press_enter.draw_center(ctx);
-        self.text.level_complete.draw(title_pos, ctx);
-        self.turret.draw(ctx, &mut self.assets);
-        self.turret.draw_lives(self.lives, ctx, &mut self.assets);
-        let pct = elapsed / 3000.0;
-        if pct > 0.75 {
-            let r = ((elapsed * 2.0) as i32 % 255) as u8;
-            let g = ((elapsed * 3.23) as i32 % 255) as u8;
-            let b = ((elapsed * 5.34) as i32 % 255) as u8;
-            graphics::clear(ctx, Color::from_rgb(r, g, b));
-        }
+        self.text.press_enter.draw_center(ctx, canvas);
+        self.text.level_complete.draw(title_pos, ctx, canvas);
+        self.turret.draw(ctx, &mut self.assets, canvas);
+        self.turret
+            .draw_lives(self.lives, ctx, &mut self.assets, canvas);
+        // let pct = elapsed / 3000.0;
+        // if pct > 0.75 {
+        //     let r = ((elapsed * 2.0) as i32 % 255) as u8;
+        //     let g = ((elapsed * 3.23) as i32 % 255) as u8;
+        //     let b = ((elapsed * 5.34) as i32 % 255) as u8;
+        // graphics::clear(ctx, graphics::Color::from_rgb(r, g, b));
+        // }
     }
 
-    fn draw_dead(&mut self, ctx: &mut Context) {
-        self.background.draw(ctx, &self.assets);
+    fn draw_dead(&mut self, ctx: &mut Context, canvas: &mut graphics::Canvas) {
+        self.background.draw(ctx, &self.assets, canvas);
         let mut title_pos = self.text.dead_text.center(ctx);
         title_pos[1] *= 0.5;
-        self.text.press_enter.draw_center(ctx);
-        self.text.dead_text.draw(title_pos, ctx);
+        self.text.press_enter.draw_center(ctx, canvas);
+        self.text.dead_text.draw(title_pos, ctx, canvas);
     }
-    fn draw_playing(&mut self, ctx: &mut Context) {
+    fn draw_playing(&mut self, ctx: &mut Context, canvas: &mut graphics::Canvas) {
         //Draw the background
-        self.background.draw(ctx, &self.assets);
+        self.background.draw(ctx, &self.assets, canvas);
 
         // if we have a target, draw the crosshair
         match self.target {
@@ -713,43 +725,43 @@ impl MainState {
                 let alien = &self.aliens[target];
 
                 //draw the crosshair on the target
-                let crosshair_pos =
-                    to_screen_pos((alien.pos[0], alien.pos[1]), graphics::size(ctx));
-                self.crosshair.draw(crosshair_pos, ctx, &self.assets);
+                let crosshair_pos = to_screen_pos((alien.pos[0], alien.pos[1]), ctx.gfx.size());
+                self.crosshair
+                    .draw(crosshair_pos, ctx, &self.assets, canvas);
                 //draw the laser if the turret is firing
                 match self.turret.state {
                     TurretState::Firing => {
-                        let screen_size = graphics::size(ctx);
+                        let screen_size = ctx.gfx.size();
                         let turret_pos = self.turret.pixel_pos(screen_size);
 
                         //make the lasers come out of the actual gunscar
-                        let left_pos = na::Point2::new(turret_pos[0] - 0.01*screen_size.0,turret_pos[1] - 0.01*screen_size.1);
-                        let right_pos = na::Point2::new(turret_pos[0] + 0.01*screen_size.0,turret_pos[1] - 0.01*screen_size.1);
-                        
+                        let left_pos = na::Point2::new(
+                            turret_pos[0] - 0.01 * screen_size.0,
+                            turret_pos[1] - 0.01 * screen_size.1,
+                        );
+                        let right_pos = na::Point2::new(
+                            turret_pos[0] + 0.01 * screen_size.0,
+                            turret_pos[1] - 0.01 * screen_size.1,
+                        );
+
                         //left laser
                         let laser = graphics::Mesh::new_line(
                             ctx,
-                            &[
-                                left_pos,
-                                alien.pixel_pos(screen_size),
-                            ],
+                            &[left_pos, alien.pixel_pos(screen_size)],
                             4.0,
                             graphics::Color::from((255, 0, 0, 255)),
                         )
                         .unwrap();
-                        let _ = graphics::draw(ctx, &laser, graphics::DrawParam::default());
+                        canvas.draw(&laser, graphics::DrawParam::default());
                         //right laser
                         let laser = graphics::Mesh::new_line(
                             ctx,
-                            &[
-                                right_pos,
-                                alien.pixel_pos(screen_size),
-                            ],
+                            &[right_pos, alien.pixel_pos(screen_size)],
                             4.0,
                             graphics::Color::from((255, 0, 0, 255)),
                         )
                         .unwrap();
-                        let _ = graphics::draw(ctx, &laser, graphics::DrawParam::default());
+                        canvas.draw(&laser, graphics::DrawParam::default());
                     }
                     TurretState::Resting => (),
                 }
@@ -759,32 +771,34 @@ impl MainState {
 
         //draw the aliens, turrets, and messages
         for alien in &mut self.aliens {
-            alien.draw(ctx, &mut self.assets);
+            alien.draw(ctx, &mut self.assets, canvas);
         }
-        self.turret.draw(ctx, &mut self.assets);
-        self.turret.draw_lives(self.lives, ctx, &mut self.assets);
+        self.turret.draw(ctx, &mut self.assets, canvas);
+        self.turret
+            .draw_lives(self.lives, ctx, &mut self.assets, canvas);
         if !self.messages.is_empty() {
-            self.messages[0].draw(ctx);
+            self.messages[0].draw(ctx, canvas);
         }
     }
-    fn draw_dying(&mut self, ctx: &mut Context) {
-        self.background.draw(ctx, &self.assets);
+    fn draw_dying(&mut self, ctx: &mut Context, canvas: &mut graphics::Canvas) {
+        self.background.draw(ctx, &self.assets, canvas);
         for alien in &mut self.aliens {
-            alien.draw(ctx, &mut self.assets);
+            alien.draw(ctx, &mut self.assets, canvas);
         }
-        self.turret.draw(ctx, &mut self.assets);
-        self.turret.draw_lives(self.lives, ctx, &mut self.assets);
+        self.turret.draw(ctx, &mut self.assets, canvas);
+        self.turret
+            .draw_lives(self.lives, ctx, &mut self.assets, canvas);
         for i in 0..self.turret.explosions.len() {
-            let mut pos = self.turret.pixel_pos(graphics::size(ctx));
-            pos[0] += ((10 + i % 2) as f32 / 100.0) * graphics::size(ctx).0;
+            let mut pos = self.turret.pixel_pos(ctx.gfx.size());
+            pos[0] += ((10 + i % 2) as f32 / 100.0) * ctx.gfx.size().0;
 
-            self.turret.explosions[i].draw(ctx, &mut self.assets)
+            self.turret.explosions[i].draw(ctx, &mut self.assets, canvas)
         }
     }
 }
 impl event::EventHandler for MainState {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
-        self.dt = timer::delta(ctx);
+        self.dt = ctx.time.delta();
         match &self.state {
             GameState::DifficultySelect => self.update_difficulty_select(ctx),
             GameState::LevelSelect => self.update_level_select(ctx),
@@ -807,63 +821,66 @@ impl event::EventHandler for MainState {
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
-        graphics::clear(ctx, [0.0, 0.0, 0.0, 1.0].into());
+        let mut canvas =
+            graphics::Canvas::from_frame(ctx, graphics::Color::from([0.0, 0.0, 0.0, 1.0]));
+
         match &mut self.state {
-            GameState::DifficultySelect => self.draw_difficulty_select(ctx),
-            GameState::LevelSelect => self.draw_level_select(ctx),
+            GameState::DifficultySelect => self.draw_difficulty_select(ctx, &mut canvas),
+            GameState::LevelSelect => self.draw_level_select(ctx, &mut canvas),
             GameState::LevelTransition(elapsed) => {
                 let x = *elapsed;
-                self.draw_level_transition(ctx, x);
+                self.draw_level_transition(ctx, x, &mut canvas);
             }
-            GameState::Playing => self.draw_playing(ctx),
-            GameState::Dying => self.draw_dying(ctx),
-            GameState::Dead => self.draw_dead(ctx),
-            GameState::Won => self.draw_won(ctx),
-            GameState::LevelComplete => self.draw_level_complete(ctx),
+            GameState::Playing => self.draw_playing(ctx, &mut canvas),
+            GameState::Dying => self.draw_dying(ctx, &mut canvas),
+            GameState::Dead => self.draw_dead(ctx, &mut canvas),
+            GameState::Won => self.draw_won(ctx, &mut canvas),
+            GameState::LevelComplete => self.draw_level_complete(ctx, &mut canvas),
         }
-        graphics::present(ctx)?;
+        canvas.finish(ctx)?;
         Ok(())
     }
-    
-    fn resize_event(&mut self, ctx: &mut Context, width: f32, height: f32) {
-        let new_rect = graphics::Rect::new(0.0, 0.0, width as f32, height as f32);
-        graphics::set_screen_coordinates(ctx, new_rect).unwrap();
+
+    fn resize_event(&mut self, _ctx: &mut Context, _width: f32, _height: f32) -> GameResult {
+        // let new_rect = graphics::Rect::new(0.0, 0.0, width as f32, height as f32);
+        // graphics::set_screen_coordinates(ctx, new_rect).unwrap();
+        Ok(())
     }
 
-    fn text_input_event(&mut self, ctx: &mut Context, ch: char) {
+    fn text_input_event(&mut self, ctx: &mut Context, ch: char) -> GameResult {
         if self.state == GameState::Playing {
             if ('0' <= ch && ch <= '9') || ch == '-' {
                 self.turret.raw_text += &ch.to_string();
                 self.turret.text = MBText::new(
                     self.turret.raw_text.clone(),
-                    &self.assets.number_font,
+                    &self.fonts.number,
                     WHITE,
                     24.0,
                     ctx,
                 );
             }
         }
+        Ok(())
     }
 
-    fn key_down_event(
-        &mut self,
-        _ctx: &mut Context,
-        _keycode: KeyCode,
-        _keymod: KeyMods,
-        _repeat: bool,
-    ) {
+    fn key_down_event(&mut self, _ctx: &mut Context, input: KeyInput, _repeat: bool) -> GameResult {
         //just ovvering this so escape doesn't quit
+        match input.keycode {
+            _ => (),
+        }
+        Ok(())
     }
 
-    fn key_up_event(&mut self, ctx: &mut Context, keycode: KeyCode, _keymod: KeyMods) {
-        match keycode {
-            KeyCode::Escape => match self.state {
+    fn key_up_event(&mut self, ctx: &mut Context, input: KeyInput) -> GameResult {
+        match input.keycode {
+            Some(KeyCode::Escape) => match self.state {
                 GameState::LevelSelect => self.state = GameState::DifficultySelect,
-                GameState::DifficultySelect => event::quit(ctx),
+                GameState::DifficultySelect => ctx.request_quit(),
                 _ => self.state = GameState::LevelSelect,
             },
-            _ => self.up_key = Some(keycode),
+            _ => self.up_key = input.keycode,
         }
+        Ok(())
     }
 }
 
@@ -878,22 +895,19 @@ pub fn main() -> GameResult {
 
     let cb = ggez::ContextBuilder::new("Math Defense", "Jack Mott")
         .add_resource_path(resource_dir)
-        .window_setup(
-            conf::WindowSetup::default()
-                .title("Math Defense")                
-        )
+        .window_setup(conf::WindowSetup::default().title("Math Defense"))
         .window_mode(
             conf::WindowMode::default()
-                .dimensions(1920.0/1.5,1080.0/1.5)
-                .fullscreen_type(conf::FullscreenType::Windowed)
+                .dimensions(1920.0 / 1.5, 1080.0 / 1.5)
+                // .fullscreen_type(conf::FullscreenType::Windowed)
                 .resizable(true),
         );
 
-    let (ctx, event_loop) = &mut cb.build()?;
-    let state = &mut MainState::new(ctx)?;
+    let (mut ctx, event_loop) = cb.build()?;
+    let mut state = MainState::new(&mut ctx).unwrap();
     state.assets.music.set_repeat(true);
-    //state.assets.music.set_volume(0.07);
-    let _ = state.assets.music.play_detached();
-    state.dt = std::time::Duration::new(0, 0);
+    // /* state.assets.music.set_volume(0.07); */
+    let _ = state.assets.music.play_detached(&ctx.audio);
+    state.dt = Duration::new(0, 0);
     event::run(ctx, event_loop, state)
 }

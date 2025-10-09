@@ -1,7 +1,9 @@
-use crate::ggez_utility::*;
-use ggez::graphics::{self, Color};
-use ggez::nalgebra as na;
+extern crate nalgebra as na;
+
+use ggez::graphics::{self, Drawable};
 use ggez::Context;
+
+use crate::ggez_utility::*;
 
 const TEXT_TIME: u32 = 1000;
 
@@ -11,16 +13,16 @@ pub struct MBText {
     pub actual_h: f32,
     pub w: f32,
     pub h: f32,
-    pub color1: Color,
-    pub color2: Color,
+    pub color1: graphics::Color,
+    pub color2: graphics::Color,
     pub elapsed: u32,
 }
 
 impl MBText {
     pub fn new(
         text: String,
-        font: &graphics::Font,
-        color: Color,
+        font: &str,
+        color: graphics::Color,
         size: f32,
         context: &mut Context,
     ) -> MBText {
@@ -29,22 +31,26 @@ impl MBText {
 
     pub fn new_blink(
         text: String,
-        font: &graphics::Font,
-        color1: Color,
-        color2: Color,
+        font: &str,
+        color1: graphics::Color,
+        color2: graphics::Color,
         size: f32,
         context: &mut Context,
     ) -> MBText {
-        let text = graphics::Text::new((text, *font, size));
-        let dim = text.dimensions(context);
+        let text = graphics::Text::new(text)
+            .set_font(font)
+            .set_scale(size)
+            .clone();
+
+        let dim = text.dimensions(context).unwrap();
         MBText {
             text: text,
-            actual_w: dim.0 as f32,
-            actual_h: dim.1 as f32,
+            actual_w: dim.w as f32,
+            actual_h: dim.h as f32,
             color1: color1,
             color2: color2,
-            w: dim.0 as f32 / 1920.0,
-            h: dim.1 as f32 / 1080.0,
+            w: dim.w as f32 / 1920.0,
+            h: dim.h as f32 / 1080.0,
             elapsed: 0,
         }
     }
@@ -53,45 +59,49 @@ impl MBText {
         self.elapsed = (self.elapsed + dt.as_millis() as u32) % TEXT_TIME;
     }
 
-    pub fn draw(&self, pos: na::Point2<f32>, ctx: &mut Context) {
+    pub fn draw(&self, pos: na::Point2<f32>, ctx: &mut Context, canvas: &mut graphics::Canvas) {
         let mut pct = (self.elapsed as f32 / TEXT_TIME as f32) * 2.0;
         if pct > 1.0 {
             pct = 1.0 - (pct - 1.0);
         }
         let color = lerp_color(self.color1, self.color2, pct);
-        let _ = graphics::draw(
-            ctx,
+        canvas.draw(
             &self.text,
             graphics::DrawParam::new()
                 .color(color)
                 .dest(pos)
-                .scale(self.scale(graphics::size(ctx))),
+                .scale(self.scale(ctx.gfx.size())),
         );
     }
 
-    pub fn draw_color(&self, pos: na::Point2<f32>, color: Color, ctx: &mut Context) {
-        let _ = graphics::draw(
-            ctx,
+    pub fn draw_color(
+        &self,
+        pos: na::Point2<f32>,
+        color: graphics::Color,
+        ctx: &mut Context,
+        canvas: &mut graphics::Canvas,
+    ) {
+        canvas.draw(
             &self.text,
             graphics::DrawParam::new()
                 .color(color)
                 .dest(pos)
-                .scale(self.scale(graphics::size(ctx))),
+                .scale(self.scale(ctx.gfx.size())),
         );
     }
 
-    pub fn draw_center(&self, ctx: &mut Context) {
+    pub fn draw_center(&self, ctx: &mut Context, canvas: &mut graphics::Canvas) {
         let pos = self.center(ctx);
-        self.draw(pos, ctx);
+        self.draw(pos, ctx, canvas);
     }
 
-    pub fn draw_horizontal_center(&self, y: f32, ctx: &mut Context) {
+    pub fn draw_horizontal_center(&self, y: f32, ctx: &mut Context, canvas: &mut graphics::Canvas) {
         let center = self.center(ctx);
-        self.draw(na::Point2::new(center[0], y), ctx);
+        self.draw(na::Point2::new(center[0], y), ctx, canvas);
     }
 
     pub fn center(&self, ctx: &mut Context) -> na::Point2<f32> {
-        let window_dim = graphics::size(ctx);
+        let window_dim = ctx.gfx.size();
         let text_dim = self.dest_pixel_dimensions(window_dim);
         na::Point2::new(
             window_dim.0 / 2.0 - text_dim.0 as f32 / 2.0,
