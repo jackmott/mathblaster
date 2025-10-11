@@ -1,9 +1,9 @@
+extern crate nalgebra as na;
+
+use ggez::{graphics, Context};
+
 use crate::assets::*;
 use crate::ggez_utility::*;
-use ggez::graphics;
-use ggez::graphics::DrawParam;
-use ggez::nalgebra as na;
-use ggez::Context;
 
 pub struct Background {
     pub src_pixel_width: f32,
@@ -20,16 +20,21 @@ impl Background {
         self.stars2_pos = ((self.stars2_pos + t / 16_000.0) * multiplier) % 1.0;
     }
 
-    pub fn draw_no_stars(&mut self, ctx: &mut Context, assets: &Assets) {
-        let background_param = graphics::DrawParam::new().scale(self.scale(graphics::size(ctx)));
-        let _ = graphics::draw(ctx, &assets.background, background_param);
+    pub fn draw_no_stars(
+        &mut self,
+        ctx: &mut Context,
+        assets: &Assets,
+        canvas: &mut graphics::Canvas,
+    ) {
+        let background_param = graphics::DrawParam::new().scale(self.scale(ctx.gfx.size()));
+        canvas.draw(&assets.background, background_param);
     }
 
-    pub fn draw(&mut self, ctx: &mut Context, assets: &Assets) {
-        let background_param = graphics::DrawParam::new().scale(self.scale(graphics::size(ctx)));
-        let _ = graphics::draw(ctx, &assets.background, background_param);
+    pub fn draw(&mut self, ctx: &mut Context, assets: &Assets, canvas: &mut graphics::Canvas) {
+        let background_param = graphics::DrawParam::new().scale(self.scale(ctx.gfx.size()));
+        canvas.draw(&assets.background, background_param);
 
-        let (screen_wf, screen_hf) = graphics::size(ctx);
+        let (screen_wf, screen_hf) = ctx.gfx.size();
         let screen_w = screen_wf as i32;
         let screen_h = screen_hf as i32;
 
@@ -50,11 +55,11 @@ impl Background {
             };
             let rect = graphics::Rect::new(0.0, y_pct, 1.0, 1.0 - y_pct);
             for x in (0..screen_w).step_by(w) {
-                let star_param = DrawParam::new()
+                let star_param = graphics::DrawParam::new()
                     .src(rect)
                     .dest(na::Point2::new(x as f32, y as f32))
                     .scale(na::Vector2::new(0.5, 0.5));
-                let _ = graphics::draw(ctx, &assets.stars1, star_param);
+                canvas.draw(&assets.stars1, star_param);
             }
 
             y += delta as i32;
@@ -77,11 +82,11 @@ impl Background {
             };
             let rect = graphics::Rect::new(0.0, y_pct, 1.0, 1.0 - y_pct);
             for x in (0..screen_w).step_by(w) {
-                let star_param = DrawParam::new()
+                let star_param = graphics::DrawParam::new()
                     .src(rect)
                     .dest(na::Point2::new(x as f32, y as f32))
                     .scale(na::Vector2::new(2.0, 2.0));
-                let _ = graphics::draw(ctx, &assets.stars2, star_param);
+                canvas.draw(&assets.stars2, star_param);
             }
 
             y += delta as i32;

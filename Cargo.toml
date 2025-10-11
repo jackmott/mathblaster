@@ -6,8 +6,8 @@ authors = [ "Jack" ]
 edition="2018"
 
 [dependencies]
-ggez = "*"
-rand = "*"
-nalgebra = "*"
-serde = { version = "*", features = ["derive"] }
-serde_json = "*"
+ggez = "0.9.3"
+rand = "0.9"
+nalgebra = { version = "0.34", features = ["mint"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

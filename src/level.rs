@@ -1,12 +1,13 @@
-use crate::assets::*;
-use crate::message::*;
 use ggez::Context;
 
 use serde::{Deserialize, Serialize};
+
 use std::collections::VecDeque;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::str;
+
+use crate::message::*;
 
 #[derive(Deserialize, Serialize, Debug, Copy, Clone, PartialEq)]
 pub enum Operation {
@@ -45,8 +46,8 @@ pub const MIN_NUMBER_DIFFICULTY: [f32; 4] = [1.0, 1.25, 2.0, 3.0];
 pub const NUM_SHIPS_DIFFICULTY: [f32; 4] = [1.0, 1.25, 2.0, 3.0];
 
 impl Level {
-    pub fn push_title(&self, messages: &mut VecDeque<Message>, assets: &Assets, ctx: &mut Context) {
-        messages.push_back(Message::new(self.title.clone(), 2000.0, assets, ctx));
+    pub fn push_title(&self, messages: &mut VecDeque<Message>, font: &str, ctx: &mut Context) {
+        messages.push_back(Message::new(self.title.clone(), font, 2000.0, ctx));
     }
 
     pub fn load_from_file() -> Vec<Level> {
@@ -69,22 +70,25 @@ impl Level {
                 // If we get an error, load the default and save a new levels.json file
                 println!("Error loading level file.\nUsing default\n{}", msg);
                 let levels = Level::new();
-                Level::save_levels(&levels);                    
+                Level::save_levels(&levels);
                 levels
             }
         }
     }
 
     pub fn save_levels(levels: &Vec<Level>) {
-        fn save_helper(levels: &Vec<Level>) -> Result<(),String> {            
-            let serialized = serde_json::to_string_pretty(&levels).map_err(|_| "couldn't serialize levels")?; 
-            let mut file = File::create("resources/levels.json").map_err(|_| "couldn't create save file for levels")?;
-            file.write_all(serialized.as_bytes()).map_err(|_| "couldn't wire to save file")?;
+        fn save_helper(levels: &Vec<Level>) -> Result<(), String> {
+            let serialized =
+                serde_json::to_string_pretty(&levels).map_err(|_| "couldn't serialize levels")?;
+            let mut file = File::create("resources/levels.json")
+                .map_err(|_| "couldn't create save file for levels")?;
+            file.write_all(serialized.as_bytes())
+                .map_err(|_| "couldn't wire to save file")?;
             Ok(())
         }
         match save_helper(&levels) {
-            Err(msg) => println!("{}",msg),
-            Ok(_) => ()
+            Err(msg) => println!("{}", msg),
+            Ok(_) => (),
         }
     }
 

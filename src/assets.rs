@@ -1,6 +1,4 @@
-use ggez::audio;
-use ggez::graphics::{self};
-use ggez::Context;
+use ggez::{audio, graphics, Context};
 
 pub struct Assets {
     pub add_ship: graphics::Image,
@@ -8,9 +6,6 @@ pub struct Assets {
     pub mul_ship: graphics::Image,
     pub div_ship: graphics::Image,
     pub crosshair: graphics::Image,
-    pub title_font: graphics::Font,
-    pub main_font: graphics::Font,
-    pub number_font: graphics::Font,
     pub turret: graphics::Image,
     pub background: graphics::Image,
     pub stars1: graphics::Image,
@@ -27,25 +22,38 @@ pub struct Assets {
 impl Assets {
     pub fn new(ctx: &mut Context, start_bg: String) -> Assets {
         Assets {
-            add_ship: graphics::Image::new(ctx, "/add-ship.png").unwrap(),
-            sub_ship: graphics::Image::new(ctx, "/sub-ship.png").unwrap(),
-            mul_ship: graphics::Image::new(ctx, "/mul-ship.png").unwrap(),
-            crosshair: graphics::Image::new(ctx, "/crosshair.png").unwrap(),
-            div_ship: graphics::Image::new(ctx, "/div-ship.png").unwrap(),
-            title_font: graphics::Font::new(ctx, "/title.ttf").unwrap(),
-            main_font: graphics::Font::new(ctx, "/main.ttf").unwrap(),
-            number_font: graphics::Font::new(ctx, "/number.ttf").unwrap(),
-            turret: graphics::Image::new(ctx, "/turret.png").unwrap(),
-            background: graphics::Image::new(ctx, start_bg).unwrap(),
-            stars1: graphics::Image::new(ctx, "/stars1.png").unwrap(),
-            stars2: graphics::Image::new(ctx, "/stars2.png").unwrap(),
-            explosion: graphics::Image::new(ctx, "/explosion.png").unwrap(),
-            explosion_sound: audio::Source::new(ctx, "/explosion.wav").unwrap(),
-            clap_sound: audio::Source::new(ctx, "/clap.ogg").unwrap(),
-            launch_sound: audio::Source::new(ctx, "/launch.wav").unwrap(),
-            fail_sound: audio::Source::new(ctx, "/fail.ogg").unwrap(),
-            laser_sound: audio::Source::new(ctx, "/laser.ogg").unwrap(),
-            music: audio::Source::new(ctx, "/music.mp3").unwrap(),
+            add_ship: graphics::Image::from_path(ctx, "/add-ship.png").unwrap(),
+            sub_ship: graphics::Image::from_path(ctx, "/sub-ship.png").unwrap(),
+            mul_ship: graphics::Image::from_path(ctx, "/mul-ship.png").unwrap(),
+            crosshair: graphics::Image::from_path(ctx, "/crosshair.png").unwrap(),
+            div_ship: graphics::Image::from_path(ctx, "/div-ship.png").unwrap(),
+            turret: graphics::Image::from_path(ctx, "/turret.png").unwrap(),
+            background: graphics::Image::from_path(ctx, start_bg).unwrap(),
+            stars1: graphics::Image::from_path(ctx, "/stars1.png").unwrap(),
+            stars2: graphics::Image::from_path(ctx, "/stars2.png").unwrap(),
+            explosion: graphics::Image::from_path(ctx, "/explosion.png").unwrap(),
+            explosion_sound: audio::Source::new(ctx, "/explosion.wav").expect("Sound"),
+            clap_sound: audio::Source::new(ctx, "/clap.ogg").expect("Sound"),
+            launch_sound: audio::Source::new(ctx, "/launch.wav").expect("Sound"),
+            fail_sound: audio::Source::new(ctx, "/fail.ogg").expect("Sound"),
+            laser_sound: audio::Source::new(ctx, "/laser.ogg").expect("Sound"),
+            music: audio::Source::new(ctx, "/music.mp3").expect("Sound"),
+        }
+    }
+}
+
+pub struct FontAssets {
+    pub title_font: graphics::FontData,
+    pub main_font: graphics::FontData,
+    pub number_font: graphics::FontData,
+}
+
+impl FontAssets {
+    pub fn new(ctx: &mut Context) -> FontAssets {
+        FontAssets {
+            title_font: graphics::FontData::from_path(ctx, "/title.ttf").unwrap(),
+            main_font: graphics::FontData::from_path(ctx, "/main.ttf").unwrap(),
+            number_font: graphics::FontData::from_path(ctx, "/number.ttf").unwrap(),
         }
     }
 }
